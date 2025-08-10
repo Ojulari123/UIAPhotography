@@ -132,3 +132,25 @@ async def calculate_checkout_total(order_id: Optional[int] = None, customer_name
     db.commit()           
     db.refresh(checkoutTotal)
     return checkoutTotal
+
+@orders_router.delete("/delete-an-order")
+async def delete_an_order(order_id: Optional[int]= None, customer_name: Optional[str]= None, db: Session = Depends(get_db)):
+    if order_id:
+        delete_order_query = db.query(Orders).filter(Orders.id == order_id).first()
+    elif customer_name:
+        delete_order_query = db.query(Orders).filter(Orders.title == customer_name).first()
+    else:
+        raise HTTPException(status_code=404, detail="Provide either Product ID or Title")
+    
+    if not delete_order_query:
+        raise HTTPException(status_code=404, detail="This artwork cannot be found in the Products table")
+    
+    db.delete(delete_order_query)
+    db.commit()
+    return {"detail": f"Order ID {order_id or ''} / Customer {customer_name or ''} has been deleted"}
+    
+@orders_router.delete("/delete-all-orders")
+async def delete_all_orders(db: Session = Depends(get_db)):
+    delete_orders = db.query(Orders).delete()
+    db.commit()
+    return {"detail": f"Deleted {delete_orders} orders from the Orders table"}

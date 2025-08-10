@@ -9,7 +9,6 @@ PriceType = condecimal(max_digits=6, decimal_places=2)
 FileSizeType = condecimal(max_digits=5, decimal_places=2)
 
 class AddProductsbyUrlInfo (BaseModel):
-    id: int 
     title: str
     description: Optional[str] = None
     image_url: Optional[HttpUrl] = None

@@ -64,13 +64,13 @@ class Orders(Base):
     customer_email = Column(String(255), nullable=False)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
     
-    items = relationship("OrderItem", back_populates="order")
+    items = relationship("OrderItem", back_populates="order", cascade="all, delete", passive_deletes=True)
 
 class OrderItem(Base):
     __tablename__ = "OrderItems"
 
     id = Column(Integer, primary_key=True)
-    order_id = Column(Integer, ForeignKey("Orders.id"), nullable=False)
+    order_id = Column(Integer, ForeignKey("Orders.id", ondelete="CASCADE"), nullable=False)
     product_id = Column(Integer, ForeignKey("Photos.id"), nullable=False)
     price_at_purchase = Column(Numeric(6, 2), nullable=False)
     

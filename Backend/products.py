@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Form, File, UploadFile, B
 from sqlalchemy.orm import Session
 from tables import Products, CheckoutInfo
 from schemas import AddProductsbyUrlInfo, ProductsData, AddProductMetafield, EditProductsData
-from tables import get_db
+from tables import get_db, OrderItem
 from func import generate_slug, save_upload_file
 from typing import Optional, List
 
@@ -14,7 +14,9 @@ async def add_new_photos_via_url(text: AddProductsbyUrlInfo, db: Session = Depen
 
     if add_info_query:
         raise HTTPException(status_code=400, detail="A product under this title already exists. Please try another title")
-    
+
+    if db.query(Products).filter(Products.slug == generate_slug(text.title)).first():
+        raise HTTPException(status_code=400, detail="Slug already exists. Please change the title.")
 
     add_new_products = Products(
         title=text.title,
@@ -46,6 +48,9 @@ async def add_new_photos_via_file_upload(title: str = Form(...), description: Op
     
     if not image_file:
         raise  HTTPException(status_code=400, detail="Kindly provide an image file for this product")
+    
+    if db.query(Products).filter(Products.slug == generate_slug(title)).first():
+        raise HTTPException(status_code=400, detail="Slug already exists. Please change the title.")
     
     saved_image_file = save_upload_file(image_file)
     saved_thumbnail_file = save_upload_file(thumbnail_file) if thumbnail_file else None
@@ -163,23 +168,29 @@ async def view_specific_artwork(product_id: Optional[int]= None, product_title: 
 @products_router.delete("/delete-a-photo/{product}")
 async def delete_a_photo(product_id: Optional[int]= None, product_title: Optional[str]= None, db: Session = Depends(get_db)):
     if product_id:
-        delete_photo_query = db.query(Products).filter(Products.id == product_id).delete()
+        delete_photo_query = db.query(Products).filter(Products.id == product_id).first()
     elif product_title:
-        delete_photo_query = db.query(Products).filter(Products.title == product_title).delete()
+        delete_photo_query = db.query(Products).filter(Products.title == product_title).first()
     else:
         raise HTTPException(status_code=404, detail="Provide either Product ID or Title")
     
     if not delete_photo_query:
         raise HTTPException(status_code=404, detail="This artwork cannot be found in the Products table")
     
+    linked_order_item = db.query(OrderItem).filter(OrderItem.product_id == delete_photo_query.id).first()
+    if linked_order_item:
+        raise HTTPException(status_code=400, detail="Cannot delete this photo because it is linked to existing orders.")
+    db.delete(delete_photo_query)
     db.commit()
-    db.refresh(delete_photo_query)    
     return {"detail": f"Artwork ID {product_id} has been deleted from the table"}
 
 @products_router.delete("/delete-all-photos")
 async def delete_all_photos(db: Session = Depends(get_db)):
     all_photos = db.query(Products).all()
     for photos in all_photos:
+        linked_order_item = db.query(OrderItem).filter(OrderItem.product_id == photos.id).first()
+        if linked_order_item:
+            raise HTTPException(status_code=400, detail="Cannot delete this photo because it is linked to existing orders.")
         db.delete(photos) 
 
     db.commit()
