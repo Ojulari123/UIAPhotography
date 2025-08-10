@@ -40,6 +40,14 @@ class ProductsData (BaseModel):
     file_size_mb: Optional[Annotated[float, FileSizeType]] = None
     file_format: Optional[str] = None 
 
+class EditProductsData(BaseModel):
+    title: str
+    description: str
+    price: int
+    resolution: Optional[str] = None  
+    file_size_mb: Optional[Annotated[float, FileSizeType]] = None
+    file_format: Optional[str] = None 
+
 class OrderItemCreate(BaseModel):
     product_id: int
     price_at_purchase: float
@@ -65,7 +73,6 @@ class OrderResponse(BaseModel):
 
     class Config:
         orm_mode = True
-
 
 class CheckoutInfoResponse(BaseModel):
     id: int
