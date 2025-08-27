@@ -1,9 +1,10 @@
 from datetime import date, datetime
+import enum
 from fastapi import UploadFile, File
 from typing import List
 from enum import Enum
 from pydantic import BaseModel, HttpUrl, condecimal, EmailStr
-from typing import Annotated, Optional
+from typing import Annotated, Optional, Literal
 
 PriceType = condecimal(max_digits=6, decimal_places=2)
 FileSizeType = condecimal(max_digits=5, decimal_places=2)
@@ -11,18 +12,29 @@ FileSizeType = condecimal(max_digits=5, decimal_places=2)
 class AddProductsbyUrlInfo (BaseModel):
     title: str
     description: Optional[str] = None
-    image_url: Optional[HttpUrl] = None
-    thumbnail_url: Optional[HttpUrl] = None
+    image_url: Optional[HttpUrl] = "https://picsum.photos/200/300"
     price: Annotated[float,PriceType] = None
     is_for_sale: Optional[bool] = True
+    dimensions: Optional[str] = None
     resolution: Optional[str] = None  
     file_size_mb: Optional[Annotated[float, FileSizeType]] = None
     file_format: Optional[str] = None 
 
 class AddProductMetafield(BaseModel):
+    dimensions: str
     resolution: str 
     file_size_mb: Annotated[float, FileSizeType]
     file_format: str
+
+class ProductType(enum.Enum):
+    digital = "digital"
+    physical = "physical"
+
+class StatusType(enum.Enum):
+    ordered = "ordered"
+    paid = "paid"
+    shipped = "shipped"
+    delivered = "delivered"
 
 class ProductsData (BaseModel):
     id : int
@@ -35,6 +47,7 @@ class ProductsData (BaseModel):
     thumbnail_file: Optional[str] = None
     price: float
     is_for_sale: bool
+    dimensions: Optional[str] = None
     resolution: Optional[str] = None  
     file_size_mb: Optional[Annotated[float, FileSizeType]] = None
     file_format: Optional[str] = None 
@@ -43,17 +56,43 @@ class EditProductsData(BaseModel):
     title: str
     description: str
     price: int
+    is_for_sale: bool
+    dimensions: str
     resolution: Optional[str] = None  
     file_size_mb: Optional[Annotated[float, FileSizeType]] = None
     file_format: Optional[str] = None 
 
 class OrderItemCreate(BaseModel):
     product_id: int
+    product_type: ProductType
+    quantity: int
     price_at_purchase: float
 
 class OrderItemResponse(BaseModel):
     product_id: int
+    quantity: int
     price_at_purchase: float
+
+    class Config:
+        orm_mode = True
+
+class ShippingData(BaseModel):
+    country_code: str
+    address_line1: str
+    address_line2: Optional[str] = None
+    city: str
+    state: Optional[str] = None
+    postal_code: str
+    shipping_fee: Optional[float] = 0.0
+    tax: Optional[float] = 0.0
+
+class ShippingCreate(ShippingData):
+    pass
+
+class ShippingResponse(ShippingData):
+    id: int
+    created_at: datetime
+    updated_at: datetime
 
     class Config:
         orm_mode = True
@@ -67,6 +106,7 @@ class OrderResponse(BaseModel):
     id: int
     customer_name: str
     customer_email: EmailStr
+    status: StatusType
     created_at: datetime
     items: List[OrderItemCreate]
 
@@ -75,10 +115,10 @@ class OrderResponse(BaseModel):
 
 class CheckoutInfoResponse(BaseModel):
     id: int
-    product_id: int
+    order_id: int
     customer_name: str
     email: str
-    amnount_to_be_paid: float
+    amount_to_be_paid: float
     amount_paid: float
     currency: str
     payment_status: str
@@ -89,11 +129,26 @@ class CheckoutInfoResponse(BaseModel):
         orm_mode = True
 
 class CheckoutInfo(BaseModel):
-    product_id: int
+    order_id: int
     customer_name: str
     email: str
-    amnount_to_be_paid: float
+    amount_to_be_paid: float
     amount_paid: float
     currency: str
     payment_status: str
     transaction_id: str
+
+class CreateShippingInfo(BaseModel):
+    carrier: str
+    tracking_number: str
+    tracking_url: str
+
+class ShippingInfoResponse(BaseModel):
+    id: int
+    order_id: int
+    carrier: str
+    tracking_number: str
+    tracking_url: str
+
+    class Config:
+        orm_mode = True

@@ -7,7 +7,6 @@ import asyncio
 from dataclasses import dataclass
 from products import products_router
 from purchase import orders_router, payment_router, email_router, checkout_router
-# from func import 
 
 app = FastAPI()
 
@@ -31,7 +30,7 @@ connection_manager = ConnectionManager()
 
 app.include_router(products_router, prefix="/products", tags=["Products"])
 app.include_router(orders_router, tags=["Orders"])
-app.include_router(payment_router, prefix="/payment", tags=["Payment"])
+app.include_router(payment_router, tags=["Payment"])
 app.include_router(email_router, tags=["Email"])
 app.include_router(checkout_router, tags=["Checkout"])
     

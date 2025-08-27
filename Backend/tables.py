@@ -1,7 +1,8 @@
-from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, Boolean, Numeric, Date, TIMESTAMP, func, DECIMAL
+from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, Boolean, Numeric, Date, TIMESTAMP, func, DECIMAL, Enum, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
+from schemas import ProductType, StatusType
 import os
 from dotenv import load_dotenv
 
@@ -32,29 +33,30 @@ class Products(Base):
     thumbnail_file = Column(Text, nullable=True)
     price = Column(Numeric(6, 2), nullable=False)
     is_for_sale = Column(Boolean, default=True)
+    dimensions = Column(String(50), nullable=True)
     resolution = Column(String(100),nullable=True)
     file_format = Column(String(30),nullable=True)
     file_size_mb = Column(DECIMAL(5, 2),nullable=True)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
     updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
 
-    productid_relationship = relationship("CheckoutInfo", primaryjoin="Products.id == CheckoutInfo.product_id", back_populates="productid_rel")
+    items = relationship("OrderItem", back_populates="product")
 
 class CheckoutInfo(Base):
     __tablename__ = "Checkout_Info"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    product_id = Column(Integer, ForeignKey("Photos.id"), nullable=False)  
+    order_id = Column(Integer, ForeignKey("Orders.id"), nullable=False, unique=True)  
     customer_name = Column(String(255), nullable=False)                     
     email = Column(String(255), nullable=False)  
-    amnount_to_be_paid = Column(Numeric(6, 2), nullable=False)                  
+    amount_to_be_paid = Column(Numeric(6, 2), nullable=False)                  
     amount_paid = Column(Numeric(6, 2), nullable=False)                     
     currency = Column(String(10), nullable=False, default="GBP")        
     payment_status = Column(String(50), nullable=False, default="pending")    
     transaction_id = Column(String(255), unique=True, nullable=False)                         
     collected_at = Column(TIMESTAMP(timezone=True), server_default=func.now()) 
 
-    productid_rel = relationship("Products", foreign_keys=[product_id], back_populates="productid_relationship")
+    order = relationship("Orders", back_populates="checkout_info")
 
 class Orders(Base):
     __tablename__ = "Orders"
@@ -62,9 +64,13 @@ class Orders(Base):
     id = Column(Integer, primary_key=True)
     customer_name = Column(String(255), nullable=False) 
     customer_email = Column(String(255), nullable=False)
+    status = Column(Enum(StatusType, name="order_status_enum"), nullable=False)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
     
     items = relationship("OrderItem", back_populates="order", cascade="all, delete", passive_deletes=True)
+    shipping = relationship("Shipping", uselist=False, back_populates="order", cascade="all, delete", passive_deletes=True)
+    checkout_info = relationship("CheckoutInfo", uselist=False, back_populates="order")
+    shipping_info = relationship("ShippingInfo", back_populates="order", uselist=False)
 
 class OrderItem(Base):
     __tablename__ = "OrderItems"
@@ -72,10 +78,43 @@ class OrderItem(Base):
     id = Column(Integer, primary_key=True)
     order_id = Column(Integer, ForeignKey("Orders.id", ondelete="CASCADE"), nullable=False)
     product_id = Column(Integer, ForeignKey("Photos.id"), nullable=False)
+    product_type = Column(Enum(ProductType, name="product_type_enum"), nullable=False)
     price_at_purchase = Column(Numeric(6, 2), nullable=False)
-    
+    quantity = Column(Integer, nullable=False)
+
     order = relationship("Orders", back_populates="items", foreign_keys=[order_id])
     product = relationship("Products", foreign_keys=[product_id])
+
+class Shipping(Base):
+    __tablename__ = "Shipping"
+
+    id = Column(Integer, primary_key=True)
+    order_id = Column(Integer, ForeignKey("Orders.id", ondelete="CASCADE"), nullable=False)
+    country_code = Column(String(10), nullable=False)
+    address_line1 = Column(String(255), nullable=False)
+    address_line2 = Column(String(255), nullable=True)
+    city = Column(String(100), nullable=False)
+    state = Column(String(100), nullable=False)
+    postal_code = Column(String(20), nullable=False)
+    shipping_fee = Column(Numeric(6, 2), nullable=False, default=0.00)
+    tax = Column(Numeric(6, 2), nullable=False, default=0.00)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    order = relationship("Orders", back_populates="shipping")
+
+class ShippingInfo(Base):
+    __tablename__ = "Shipping_info"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, ForeignKey("Orders.id"), nullable=False)
+    carrier = Column(String, nullable=False)
+    tracking_number = Column(String, nullable=False)
+    tracking_url = Column(String, nullable=True)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    order = relationship("Orders", back_populates="shipping_info")
 
 Base.metadata.create_all(engine)
 

@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from tables import Products, CheckoutInfo
 from schemas import AddProductsbyUrlInfo, ProductsData, AddProductMetafield, EditProductsData
 from tables import get_db, OrderItem
-from func import generate_slug, save_upload_file
+from func import generate_slug, save_upload_file, create_thumbnail
 from typing import Optional, List
 
 products_router = APIRouter()
@@ -23,11 +23,12 @@ async def add_new_photos_via_url(text: AddProductsbyUrlInfo, db: Session = Depen
         slug=generate_slug(text.title),
         description=text.description,
         image_url=str(text.image_url),
-        thumbnail_url=str(text.thumbnail_url) if text.thumbnail_url else None,
+        thumbnail_url=create_thumbnail(image_url=text.image_url),
         image_file=None,
         thumbnail_file=None,
         price=text.price,
         is_for_sale=text.is_for_sale,
+        dimensions=text.dimensions,
         resolution=text.resolution,
         file_size_mb=text.file_size_mb,
         file_format=text.file_format
@@ -40,7 +41,7 @@ async def add_new_photos_via_url(text: AddProductsbyUrlInfo, db: Session = Depen
     return add_new_products
 
 @products_router.post("/add-photos-file", response_model=ProductsData)
-async def add_new_photos_via_file_upload(title: str = Form(...), description: Optional[str] = Form(None), price: float = Form(...), is_for_sale: bool = Form(True), image_file: UploadFile = File(...), thumbnail_file: Optional[UploadFile] = File(None), db: Session = Depends(get_db)):
+async def add_new_photos_via_file_upload(title: str = Form(...), description: Optional[str] = Form(None), price: float = Form(...), is_for_sale: bool = Form(True), image_file: UploadFile = File(...), thumbnail_file: Optional[UploadFile] = File(None), dimensions : Optional[str] = File(None), db: Session = Depends(get_db)):
     add_info_query = db.query(Products).filter(Products.title == title).first()
 
     if add_info_query:
@@ -53,7 +54,7 @@ async def add_new_photos_via_file_upload(title: str = Form(...), description: Op
         raise HTTPException(status_code=400, detail="Slug already exists. Please change the title.")
     
     saved_image_file = save_upload_file(image_file)
-    saved_thumbnail_file = save_upload_file(thumbnail_file) if thumbnail_file else None
+    saved_thumbnail_file = create_thumbnail(image_file=image_file)
 
     add_new_products = Products(
         title=title,
@@ -61,7 +62,8 @@ async def add_new_photos_via_file_upload(title: str = Form(...), description: Op
         description=description,
         image_url=None,
         thumbnail_url=None,
-        image_file= saved_image_file,
+        image_file=saved_image_file,
+        dimensions=dimensions,
         thumbnail_file= saved_thumbnail_file,
         price=price,
         is_for_sale=is_for_sale
@@ -89,9 +91,10 @@ async def add_photo_metafield(product_id: Optional[int]= None, product_title: Op
     if not text:
         raise HTTPException(status_code=404, detail="Kindly fill in all the required info")
     
-    if (photo_query.resolution == text.resolution and photo_query.file_size_mb == text.file_size_mb and photo_query.file_format == text.file_format):
+    if (photo_query.dimensions == text.dimensions and photo_query.resolution == text.resolution and photo_query.file_size_mb == text.file_size_mb and photo_query.file_format == text.file_format):
         raise HTTPException(status_code=400, detail= "Provided metafield info is the same as existing data. No update performed.")
      
+    photo_query.dimensions = text.dimensions
     photo_query.resolution = text.resolution
     photo_query.file_size_mb = text.file_size_mb
     photo_query.file_format = text.file_format
@@ -102,7 +105,7 @@ async def add_photo_metafield(product_id: Optional[int]= None, product_title: Op
     return photo_query
 
 @products_router.post("/edit-photos-details", response_model=ProductsData)
-async def edit_photo_entries(text: EditProductsData, product_id: Optional[int]= None, product_title: Optional[str] = None, db : Session = Depends(get_db)):
+async def edit_photo_entries(update_data: EditProductsData, product_id: Optional[int]= None, product_title: Optional[str] = None, db : Session = Depends(get_db)):
     if product_id:
         edit_table_query = db.query(Products).filter(Products.id == product_id).first()
     elif product_title:
@@ -113,27 +116,30 @@ async def edit_photo_entries(text: EditProductsData, product_id: Optional[int]= 
     if not edit_table_query:
         raise HTTPException(status_code=404, detail="Product not found")
     
-    if(edit_table_query.title == text.title and  edit_table_query.description == text.description 
-       and edit_table_query.price == text.price and edit_table_query.resolution == text.resolution 
-       and edit_table_query.file_size_mb == text.file_size_mb and edit_table_query.file_format == text.file_format):
+    if(edit_table_query.title == update_data.title and  edit_table_query.description == update_data.description and edit_table_query.price == update_data.price 
+       and edit_table_query.is_for_sale == update_data.is_for_sale and edit_table_query.dimensions == update_data.dimensions and edit_table_query.resolution == update_data.resolution 
+       and edit_table_query.file_size_mb == update_data.file_size_mb and edit_table_query.file_format == update_data.file_format):
         raise HTTPException(status_code=400, detail= "Provided data is the same as existing data. No update performed.")
     
-    if text.title and text.title != edit_table_query.title:
-        exists = db.query(Products).filter(Products.title == text.title).first()
+    if update_data.title and update_data.title != edit_table_query.title:
+        exists = db.query(Products).filter(Products.title == update_data.title).first()
         if exists:
             raise HTTPException(status_code=400, detail="Title already in use by another product")
-        edit_table_query.title = text.title
-    
-    if text.description:
-        edit_table_query.description = text.description
-    if text.price:
-        edit_table_query.price = text.price
-    if text.resolution:
-        edit_table_query.resolution = text.resolution
-    if text.file_size_mb:
-        edit_table_query.file_size_mb = text.file_size_mb
-    if text.file_format:
-        edit_table_query.file_format = text.file_format
+        edit_table_query.title = update_data.title
+
+    edit_table_query.is_for_sale = update_data.is_for_sale
+    if update_data.dimensions:
+        edit_table_query.dimensions = update_data.dimensions
+    if update_data.description:
+        edit_table_query.description = update_data.description
+    if update_data.price:
+        edit_table_query.price = update_data.price
+    if update_data.resolution:
+        edit_table_query.resolution = update_data.resolution
+    if update_data.file_size_mb:
+        edit_table_query.file_size_mb = update_data.file_size_mb
+    if update_data.file_format:
+        edit_table_query.file_format = update_data.file_format
 
     db.commit()
     db.refresh(edit_table_query)
