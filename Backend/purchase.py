@@ -9,7 +9,7 @@ import uuid
 import logging
 import stripe
 from tables import Products, CheckoutInfo, Shipping, ShippingInfo
-from schemas import CreateOrder, OrderResponse, OrderItemCreate, OrderItemResponse, CheckoutInfoResponse, ShippingData, CreateShippingInfo, ShippingInfoResponse
+from schemas import CreateOrder, OrderResponse, OrderItemCreate, OrderItemResponse, CheckoutInfoResponse, ShippingData, CreateShippingInfo, ShippingInfoResponse, StatusType
 from func import calculate_shipping_and_tax, calculate_checkout_total_for_order, send_order_confirmation_email, send_order_status_email
 from tables import get_db, Orders, OrderItem, Products
 from sendgrid import SendGridAPIClient
@@ -285,7 +285,7 @@ async def stripe_webhook_test(order_id: int, request: Request, db: Session = Dep
 
     order = db.query(Orders).filter(Orders.id == order_id).first()
     if order:
-            order.status = "paid" 
+            order.status = StatusType.paid 
             db.commit()
             db.refresh(order)
 
