@@ -8,4 +8,4 @@ sendgrid==6.12.4
 SQLAlchemy==2.0.31
 stripe==12.4.0
 pydantic[email]==2.11.7
-psycopg2-binary==2.9.7
+psycopg[binary]==3.2.3
