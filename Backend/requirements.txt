@@ -8,3 +8,4 @@ sendgrid==6.12.4
 SQLAlchemy==2.0.31
 stripe==12.4.0
 psycopg2-binary==2.9.7
+python-multipart==0.0.6
