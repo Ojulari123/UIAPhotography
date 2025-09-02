@@ -84,8 +84,9 @@ class OrderItemResponse(BaseModel):
     quantity: int
     price_at_purchase: float
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }
 
 class ShippingData(BaseModel):
     country_code: str
@@ -105,8 +106,9 @@ class ShippingResponse(ShippingData):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }
 
 class CreateOrder(BaseModel):
     customer_name: str
@@ -121,8 +123,9 @@ class OrderResponse(BaseModel):
     created_at: datetime
     items: List[OrderItemCreate]
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }
 
 class CheckoutInfoResponse(BaseModel):
     id: int
@@ -136,8 +139,9 @@ class CheckoutInfoResponse(BaseModel):
     transaction_id: str
     collected_at: datetime
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }
 
 class CheckoutInfo(BaseModel):
     order_id: int
@@ -161,5 +165,6 @@ class ShippingInfoResponse(BaseModel):
     tracking_number: str
     tracking_url: str
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }
