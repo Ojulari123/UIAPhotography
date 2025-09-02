@@ -2,7 +2,7 @@ from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey,
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
-from schemas import ProductType, StatusType
+from schemas import ProductType, StatusType, DimensionType
 import os
 from dotenv import load_dotenv
 
@@ -33,7 +33,7 @@ class Products(Base):
     thumbnail_file = Column(Text, nullable=True)
     price = Column(Numeric(6, 2), nullable=False)
     is_for_sale = Column(Boolean, default=True)
-    dimensions = Column(String(50), nullable=True)
+    dimensions = Column(Enum(DimensionType, name="dimension_enum"), nullable=True)
     resolution = Column(String(100),nullable=True)
     file_format = Column(String(30),nullable=True)
     file_size_mb = Column(DECIMAL(5, 2),nullable=True)

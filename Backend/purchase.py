@@ -10,7 +10,7 @@ import logging
 import stripe
 from tables import Products, CheckoutInfo, Shipping, ShippingInfo
 from schemas import CreateOrder, OrderResponse, OrderItemCreate, OrderItemResponse, CheckoutInfoResponse, ShippingData, CreateShippingInfo, ShippingInfoResponse, StatusType
-from func import calculate_shipping_and_tax, calculate_checkout_total_for_order, send_order_confirmation_email, send_order_status_email
+from func import calculate_shipping_and_tax, calculate_checkout_total_for_order, send_order_confirmation_email, send_order_status_email, test
 from tables import get_db, Orders, OrderItem, Products
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
@@ -126,11 +126,11 @@ async def send_order_status_via_email(order_id:int, db: Session = Depends(get_db
         raise HTTPException(status_code=404, detail="Order not found")
     
     try:
-        send_order_status_email(order, db)
-
-        Orders.status = "shipped"
+        order.status = "shipped"
         db.commit()
         db.refresh(order)
+
+        send_order_status_email(order, db)
 
     except Exception as e:
         logger.error(f"Failed to send email for order_id {order_id}: {str(e)}")
@@ -312,3 +312,20 @@ async def delete_all_orders(db: Session = Depends(get_db)):
     delete_orders = db.query(Orders).delete()
     db.commit()
     return {"detail": f"Deleted {delete_orders} orders from the Orders table"}
+
+@orders_router.post("/weight")
+async def weight(order_id: int, db: Session = Depends(get_db)):
+    order = db.query(Orders).filter(Orders.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="No order found")
+    
+    # Call helper
+    total_weight_g = test(order, db, gsm=300)
+
+    # Commit changes to DB (product.weight updated)
+    db.commit()
+
+    return {"order_id": order.id, "total_weight_g": total_weight_g}
+
+
+    

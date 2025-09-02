@@ -9,23 +9,6 @@ from typing import Annotated, Optional, Literal
 PriceType = condecimal(max_digits=6, decimal_places=2)
 FileSizeType = condecimal(max_digits=5, decimal_places=2)
 
-class AddProductsbyUrlInfo (BaseModel):
-    title: str
-    description: Optional[str] = None
-    image_url: Optional[HttpUrl] = "https://picsum.photos/200/300"
-    price: Annotated[float,PriceType] = None
-    is_for_sale: Optional[bool] = True
-    dimensions: Optional[str] = None
-    resolution: Optional[str] = None  
-    file_size_mb: Optional[Annotated[float, FileSizeType]] = None
-    file_format: Optional[str] = None 
-
-class AddProductMetafield(BaseModel):
-    dimensions: str
-    resolution: str 
-    file_size_mb: Annotated[float, FileSizeType]
-    file_format: str
-
 class ProductType(enum.Enum):
     digital = "digital"
     physical = "physical"
@@ -35,6 +18,34 @@ class StatusType(enum.Enum):
     paid = "paid"
     shipped = "shipped"
     delivered = "delivered"
+
+class DimensionType(str, enum.Enum):
+    A3 = "A3"
+    A4 = "A4"
+    A5 = "A5"
+
+DIMENSION_DETAILS = {
+    "A3": "14.8 x 21.0 cm (11.7 x 16.5 in)",
+    "A4": "21.0 x 29.7 cm (8.3 x 11.7 in)",
+    "A5": "14.8 x 21.0 cm (5.8 x 8.3 in)",
+}
+
+class AddProductsbyUrlInfo (BaseModel):
+    title: str
+    description: Optional[str] = None
+    image_url: Optional[HttpUrl] = "https://picsum.photos/200/300"
+    price: Annotated[float,PriceType] = None
+    is_for_sale: Optional[bool] = True
+    dimensions: Optional[DimensionType] = DimensionType.A3
+    resolution: Optional[str] = None  
+    file_size_mb: Optional[Annotated[float, FileSizeType]] = None
+    file_format: Optional[str] = None 
+
+class AddProductMetafield(BaseModel):
+    dimensions: DimensionType
+    resolution: str 
+    file_size_mb: Annotated[float, FileSizeType]
+    file_format: str
 
 class ProductsData (BaseModel):
     id : int
@@ -47,7 +58,7 @@ class ProductsData (BaseModel):
     thumbnail_file: Optional[str] = None
     price: float
     is_for_sale: bool
-    dimensions: Optional[str] = None
+    dimensions: Optional[DimensionType] = DimensionType.A3
     resolution: Optional[str] = None  
     file_size_mb: Optional[Annotated[float, FileSizeType]] = None
     file_format: Optional[str] = None 
@@ -57,7 +68,7 @@ class EditProductsData(BaseModel):
     description: str
     price: int
     is_for_sale: bool
-    dimensions: str
+    dimensions: DimensionType
     resolution: Optional[str] = None  
     file_size_mb: Optional[Annotated[float, FileSizeType]] = None
     file_format: Optional[str] = None 

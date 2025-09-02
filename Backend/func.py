@@ -12,8 +12,9 @@ import logging
 import smtplib
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
-from tables import Orders, OrderItem, Shipping, CheckoutInfo, ShippingInfo
+from tables import Orders, OrderItem, Shipping, CheckoutInfo, ShippingInfo, Products
 from email.mime.multipart import MIMEMultipart
+from schemas import DimensionType, DIMENSION_DETAILS
 from email.mime.text import MIMEText
 from dotenv import load_dotenv
 
@@ -73,18 +74,54 @@ def create_thumbnail(image_file: UploadFile = None, image_url: str = None, size=
 
     return file_path
 
+def test(order, db: Session, gsm: float = 300):
+    total_weight_g = 0
+
+    for item in order.items:
+        if item.product_type.value != "physical":
+            continue
+
+        product = item.product
+        if not product:
+            continue
+
+        if not product.dimensions:
+            continue
+
+        key = product.dimensions.value.strip().upper()
+        dimension_str = DIMENSION_DETAILS.get(key)
+        if not dimension_str:
+            continue
+
+        match = re.search(r"([\d.]+)\s*x\s*([\d.]+)\s*cm", dimension_str)
+        if not match:
+            continue
+
+        width_cm = float(match.group(1))
+        length_cm = float(match.group(2))
+
+        single_weight_g = (length_cm * width_cm * gsm / 10000)
+        item_total_weight = single_weight_g * item.quantity
+        product.weight = item_total_weight
+        total_weight_g += item_total_weight
+
+    return total_weight_g
+
 def calculate_shipping_and_tax(items, country_code):
     supported_countries = {
         "US": {"shipping": Decimal("5.00"), "tax_rate": Decimal("0.05")},
         "CA": {"shipping": Decimal("5.00"), "tax_rate": Decimal("0.05")},
-        "GB": {"shipping": Decimal("5.00"), "tax_rate": Decimal("0.05")},
+        "UK": {"shipping": Decimal("5.00"), "tax_rate": Decimal("0.05")},
         "FR": {"shipping": Decimal("5.00"), "tax_rate": Decimal("0.05")},
-        "DE": {"shipping": Decimal("5.00"), "tax_rate": Decimal("0.05")},
+        "DK": {"shipping": Decimal("5.00"), "tax_rate": Decimal("0.05")},
         "AU": {"shipping": Decimal("5.00"), "tax_rate": Decimal("0.05")},
         "JP": {"shipping": Decimal("5.00"), "tax_rate": Decimal("0.05")},
-        "IN": {"shipping": Decimal("5.00"), "tax_rate": Decimal("0.05")},
+        "IR": {"shipping": Decimal("5.00"), "tax_rate": Decimal("0.05")},
         "BR": {"shipping": Decimal("5.00"), "tax_rate": Decimal("0.05")},
         "NG": {"shipping": Decimal("5.00"), "tax_rate": Decimal("0.05")},
+        "IT": {"shipping": Decimal("5.00"), "tax_rate": Decimal("0.05")},
+        "DE": {"shipping": Decimal("5.00"), "tax_rate": Decimal("0.05")},
+        "ES": {"shipping": Decimal("5.00"), "tax_rate": Decimal("0.05")},
     }
 
     country_rules = supported_countries.get(
