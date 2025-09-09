@@ -19,7 +19,9 @@ It supports **product management, orders, checkout, shipping, payments, and emai
 ---
 
 ## 📂 Project Structure
-.
+
+/Backend
+
 - main.py # ----> FastAPI entrypoint (mounts routers)
 - func.py # ----> Utility functions (slugs, images, emails, shipping, totals)
 - products.py # ----> Products API routes
