@@ -1,6 +1,6 @@
 # 🛒 UIAPhotography (Backend)
 
-This is a full-featured e-commerce backend built with **FastAPI**, **Neon PostgreSQL (SQLAlchemy ORM)**, **Stripe**, **SMTP**.  
+This is a **full-featured e-commerce backend** built with **FastAPI**, **Neon PostgreSQL (SQLAlchemy ORM)**, **Stripe**, **SMTP**.  
 It supports **product management, orders, checkout, shipping, payments, and email notifications**, making it a solid foundation for any online shop.
 
 (Frontend still in on the way)
@@ -126,7 +126,7 @@ It supports **product management, orders, checkout, shipping, payments, and emai
     Order confirmation
     Shipping updates
 
-## 🗄️ Database Models**
+## 🗄️ Database Models
 
     Products – Digital/physical products with price, dimensions, metadata
 
@@ -137,7 +137,7 @@ It supports **product management, orders, checkout, shipping, payments, and emai
     CheckoutInfo – Stripe payment & transaction data
 
     Shipping – Customer shipping address, fee, tax
-    
+
     ShippingInfo – Tracking details (carrier, tracking number, URL)
 
 ## 📌 Notes
