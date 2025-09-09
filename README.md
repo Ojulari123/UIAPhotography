@@ -49,6 +49,7 @@ It supports **product management, orders, checkout, shipping, payments, and emai
 ## ⚙️ Installation & Setup
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/Ojulari123/UIAPhotography.git
    cd backend
@@ -56,9 +57,7 @@ It supports **product management, orders, checkout, shipping, payments, and emai
 **Create Virtual Environment(Not always neccessary)**
     
     python3 -m venv venv
-
     source venv/bin/activate 
-
     venv\Scripts\activate     
 
 2. **Install dependencies**
