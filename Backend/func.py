@@ -74,108 +74,6 @@ def create_thumbnail(image_file: UploadFile = None, image_url: str = None, size=
 
     return file_path
 
-def test(order, db: Session, gsm: float = 300):
-    total_weight_g = 0
-
-    for item in order.items:
-        if item.product_type.value != "physical":
-            continue
-
-        product = item.product
-        if not product:
-            continue
-
-        if not product.dimensions:
-            continue
-
-        key = product.dimensions.value.strip().upper()
-        dimension_str = DIMENSION_DETAILS.get(key)
-        if not dimension_str:
-            continue
-
-        match = re.search(r"([\d.]+)\s*x\s*([\d.]+)\s*cm", dimension_str)
-        if not match:
-            continue
-
-        width_cm = float(match.group(1))
-        length_cm = float(match.group(2))
-
-        single_weight_g = (length_cm * width_cm * gsm / 10000)
-        item_total_weight = single_weight_g * item.quantity
-        product.weight = item_total_weight
-        total_weight_g += item_total_weight
-
-    return total_weight_g
-
-def calculate_shipping_and_tax(items, country_code):
-    supported_countries = {
-        "US": {"shipping": Decimal("5.00"), "tax_rate": Decimal("0.05")},
-        "CA": {"shipping": Decimal("5.00"), "tax_rate": Decimal("0.05")},
-        "UK": {"shipping": Decimal("5.00"), "tax_rate": Decimal("0.05")},
-        "FR": {"shipping": Decimal("5.00"), "tax_rate": Decimal("0.05")},
-        "DK": {"shipping": Decimal("5.00"), "tax_rate": Decimal("0.05")},
-        "AU": {"shipping": Decimal("5.00"), "tax_rate": Decimal("0.05")},
-        "JP": {"shipping": Decimal("5.00"), "tax_rate": Decimal("0.05")},
-        "IR": {"shipping": Decimal("5.00"), "tax_rate": Decimal("0.05")},
-        "BR": {"shipping": Decimal("5.00"), "tax_rate": Decimal("0.05")},
-        "NG": {"shipping": Decimal("5.00"), "tax_rate": Decimal("0.05")},
-        "IT": {"shipping": Decimal("5.00"), "tax_rate": Decimal("0.05")},
-        "DE": {"shipping": Decimal("5.00"), "tax_rate": Decimal("0.05")},
-        "ES": {"shipping": Decimal("5.00"), "tax_rate": Decimal("0.05")},
-    }
-
-    country_rules = supported_countries.get(
-        country_code.upper(), {"shipping": Decimal("5.00"), "tax_rate": Decimal("0.05")}
-    )
-
-    total_shipping = Decimal("0.00")
-    total_tax = Decimal("0.00")
-
-    for item in items:
-        if item.product_type == "physical":
-            total_shipping += country_rules["shipping"] * item.quantity
-            total_tax += Decimal(item.price_at_purchase) * country_rules["tax_rate"]
-
-    return total_shipping, total_tax
-
-def calculate_checkout_total_for_order(order: Orders, db: Session):
-    if not order.items:
-        raise HTTPException(status_code=404, detail="Order has no items")
-
-    total_items = sum(item.price_at_purchase * item.quantity for item in order.items)
-
-    shipping_fee = Decimal("0.0")
-    tax = Decimal("0.0")
-    if order.shipping:
-        shipping_fee = Decimal(order.shipping.shipping_fee)
-        tax = Decimal(order.shipping.tax)
-
-    checkout_total = total_items + shipping_fee + tax
-
-    checkout_info = db.query(CheckoutInfo).filter(CheckoutInfo.order_id == order.id).first()
-
-    if not checkout_info:
-        checkout_info = CheckoutInfo(
-            order_id=order.id,
-            customer_name=order.customer_name,
-            email=order.customer_email,
-            amount_to_be_paid=checkout_total,
-            amount_paid=Decimal("0.0"),
-            currency="GBP",
-            payment_status="pending",
-            transaction_id=str(uuid.uuid4()),
-            collected_at=datetime.now()
-        )
-        db.add(checkout_info)
-    else:
-        checkout_info.amount_to_be_paid = checkout_total
-        checkout_info.customer_name = order.customer_name
-        checkout_info.email = order.customer_email
-        checkout_info.collected_at = datetime.now()
-
-    db.commit()
-    db.refresh(checkout_info)
-    return checkout_info
 
 def send_order_confirmation_email(order: Orders):
     product_title = (order.items[0].product.title if order.items else "your product")
@@ -236,3 +134,154 @@ def send_order_status_email(order: Orders, db):
         server.sendmail(SMTP_USERNAME, order.customer_email, msg.as_string())
 
     logger.info(f"Order shipped email sent to {order.customer_email} for order_id {order.id}")
+
+def calculate_order_weight(order, db: Session, gsm: float = 300):
+    total_weight_g = 0
+
+    for item in order.items:
+        if item.product_type.value != "physical":
+            continue
+
+        product = item.product
+        if not product:
+            continue
+
+        if not product.dimensions:
+            continue
+
+        key = product.dimensions.value.strip().upper()
+        dimension_str = DIMENSION_DETAILS.get(key)
+        if not dimension_str:
+            continue
+
+        match = re.search(r"([\d.]+)\s*x\s*([\d.]+)\s*cm", dimension_str)
+        if not match:
+            continue
+
+        width_cm = float(match.group(1))
+        length_cm = float(match.group(2))
+
+        single_weight_g = (length_cm * width_cm * gsm / 10000)
+        item_total_weight = single_weight_g * item.quantity
+        product.weight = item_total_weight
+        total_weight_g += item_total_weight
+
+    return total_weight_g
+
+
+def calculate_checkout_total_for_order(order: Orders, db: Session):
+    if not order.items:
+        raise HTTPException(status_code=404, detail="Order has no items")
+
+    total_items = sum(item.price_at_purchase * item.quantity for item in order.items)
+
+    shipping_fee = Decimal("0.0")
+    tax = Decimal("0.0")
+    if order.shipping:
+        shipping_fee = Decimal(order.shipping.shipping_fee)
+        tax = Decimal(order.shipping.tax)
+
+    checkout_total = total_items + shipping_fee + tax
+
+    checkout_info = db.query(CheckoutInfo).filter(CheckoutInfo.order_id == order.id).first()
+
+    if not checkout_info:
+        checkout_info = CheckoutInfo(
+            order_id=order.id,
+            customer_name=order.customer_name,
+            email=order.customer_email,
+            amount_to_be_paid=checkout_total,
+            amount_paid=Decimal("0.0"),
+            currency="GBP",
+            payment_status="pending",
+            transaction_id=str(uuid.uuid4()),
+            collected_at=datetime.now()
+        )
+        db.add(checkout_info)
+    else:
+        checkout_info.amount_to_be_paid = checkout_total
+        checkout_info.customer_name = order.customer_name
+        checkout_info.email = order.customer_email
+        checkout_info.collected_at = datetime.now()
+
+    db.commit()
+    db.refresh(checkout_info)
+    return checkout_info
+
+
+ROYAL_MAIL_PRICES = {
+    "<=100": {
+        "UK": {"standard": Decimal("4.29"), "tracked": Decimal("3.45")},
+        "CA": {"standard": Decimal("7.80"), "tracked": Decimal("13.75")},
+        "US": {"standard": Decimal("11.75"), "tracked": Decimal("16.15")},
+        "FR": {"standard": Decimal("5.80"), "tracked": Decimal("9.70")},
+        "NG": {"standard": Decimal("7.80")},
+        "AU": {"standard": Decimal("8.90"), "tracked": Decimal("13.95")},
+        "IE": {"standard": Decimal("5.80"), "tracked": Decimal("8.65")},
+        "BR": {"standard": Decimal("7.80"), "tracked": Decimal("12.30")},
+        "DK": {"standard": Decimal("5.80"), "tracked": Decimal("8.75")},
+        "JP": {"standard": Decimal("7.80"), "tracked": Decimal("11.30")},
+        "NL": {"standard": Decimal("6.30"), "tracked": Decimal("9.00")},
+        "DE": {"standard": Decimal("5.80"), "tracked": Decimal("8.00")},
+        "IT": {"standard": Decimal("6.30"), "tracked": Decimal("9.65")},
+        "ES": {"standard": Decimal("6.30"), "tracked": Decimal("9.65")},
+        "ZA": {"standard": Decimal("7.80"), "tracked": Decimal("12.50")},
+        "OTHER": {"standard": Decimal("11.50"), "tracked": Decimal("17.00")},
+    },
+    "100-250": {
+        "UK": {"standard": Decimal("4.29"), "tracked": Decimal("3.45")},
+        "CA": {"standard": Decimal("9.40"), "tracked": Decimal("13.75")},
+        "US": {"standard": Decimal("11.75"), "tracked": Decimal("16.55")},
+        "FR": {"standard": Decimal("5.80"), "tracked": Decimal("9.70")},
+        "NG": {"standard": Decimal("9.40")},
+        "AU": {"standard": Decimal("10.05"), "tracked": Decimal("12.35")},
+        "IE": {"standard": Decimal("5.80"), "tracked": Decimal("8.65")},
+        "BR": {"standard": Decimal("9.40"), "tracked": Decimal("12.30")},
+        "DK": {"standard": Decimal("5.80"), "tracked": Decimal("8.75")},
+        "JP": {"standard": Decimal("9.40"), "tracked": Decimal("11.30")},
+        "NL": {"standard": Decimal("6.30"), "tracked": Decimal("9.00")},
+        "DE": {"standard": Decimal("5.80"), "tracked": Decimal("8.00")},
+        "IT": {"standard": Decimal("6.30"), "tracked": Decimal("9.45")},
+        "ES": {"standard": Decimal("6.30"), "tracked": Decimal("9.65")},
+        "ZA": {"standard": Decimal("9.40"), "tracked": Decimal("12.50")},
+        "OTHER": {"standard": Decimal("13.00"), "tracked": Decimal("19.00")},
+    },
+}
+
+def get_shipping_price(country_code: str, weight_g: float, shipping_type="standard") -> Decimal:
+    # Pick weight tier
+    if weight_g <= 100:
+        tier = "<=100"
+    elif weight_g <= 250:
+        tier = "100-250"
+    else:
+        tier = "100-250"  # fallback for now
+
+    country_code = country_code.upper()
+    country_prices = ROYAL_MAIL_PRICES[tier].get(country_code, ROYAL_MAIL_PRICES[tier]["OTHER"])
+    
+    # Some countries only have "standard"
+    if shipping_type not in country_prices:
+        shipping_type = "standard"
+
+    return country_prices[shipping_type]
+
+def calculate_order_shipping_and_tax(order, country_code, shipping_type="standard"):
+   
+    total_weight_g = calculate_order_weight(order, db=None)
+    shipping_cost = get_shipping_price(country_code, total_weight_g, shipping_type)
+
+    # Simple tax mapping (5% by default)
+    supported_countries = {
+        "US": Decimal("0.05"), "CA": Decimal("0.05"), "UK": Decimal("0.05"),
+        "FR": Decimal("0.05"), "DK": Decimal("0.05"), "AU": Decimal("0.05"),
+        "JP": Decimal("0.05"), "IR": Decimal("0.05"), "BR": Decimal("0.05"),
+        "NG": Decimal("0.05"), "IT": Decimal("0.05"), "DE": Decimal("0.05"),
+        "ES": Decimal("0.05"),
+    }
+    tax_rate = supported_countries.get(country_code.upper(), Decimal("0.05"))
+
+    subtotal = sum([Decimal(item.price_at_purchase) * item.quantity for item in order.items])
+    total_tax = subtotal * tax_rate
+
+    return shipping_cost, total_tax

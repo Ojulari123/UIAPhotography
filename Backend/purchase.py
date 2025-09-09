@@ -10,7 +10,7 @@ import logging
 import stripe
 from tables import Products, CheckoutInfo, Shipping, ShippingInfo
 from schemas import CreateOrder, OrderResponse, OrderItemCreate, OrderItemResponse, CheckoutInfoResponse, ShippingData, CreateShippingInfo, ShippingInfoResponse, StatusType
-from func import calculate_shipping_and_tax, calculate_checkout_total_for_order, send_order_confirmation_email, send_order_status_email, test
+from func import calculate_order_shipping_and_tax, calculate_checkout_total_for_order, send_order_confirmation_email, send_order_status_email, calculate_order_weight
 from tables import get_db, Orders, OrderItem, Products
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
@@ -168,7 +168,7 @@ async def paying_for_order(order_id: int, shipping: Optional[ShippingData], db: 
         if not shipping:
             raise HTTPException(status_code=400, detail="Shipping info required for physical items")
         
-        shipping_fee, tax = calculate_shipping_and_tax(order.items, shipping.country_code)
+        shipping_fee, tax = calculate_order_shipping_and_tax(order.items, shipping.country_code)
         shipping_record = Shipping(
             order_id=order.id,
             country_code=shipping.country_code,
@@ -201,95 +201,145 @@ async def paying_for_order(order_id: int, shipping: Optional[ShippingData], db: 
 
     return {"checkout_info": checkout_info_data.model_dump(), "client_secret": payment_intent.client_secret}
 
-# @payment_router.post("/payment/webhook")
-# async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
-#     payload = await request.body()
-#     sig_header = request.headers.get("stripe-signature")
 
-#     try:
-#         event = stripe.Webhook.construct_event(payload, sig_header, STRIPE_WEBHOOK_SECRET)
-#     except stripe.error.SignatureVerificationError:
-#         raise HTTPException(status_code=400, detail="Invalid Stripe signature")
-#     except Exception as e:
-#         raise HTTPException(status_code=400, detail=f"Webhook error: {str(e)}")
 
-#     if event["type"] == "payment_intent.succeeded":
-#         intent = event["data"]["object"]
-#         transaction_id = intent["id"]
-
-#         checkout_info = (db.query(CheckoutInfo).filter(CheckoutInfo.transaction_id == transaction_id).first())
-
-#         if checkout_info:
-#             checkout_info.payment_status = "succeeded"
-#             checkout_info.amount_paid = checkout_info.amount_to_be_paid
-#             db.commit()
-#             db.refresh(checkout_info)
-
-#             order = db.query(Orders).filter(Orders.id == checkout_info.order_id).first()
-#             if order:
-                # order.status = "paid"
-                # db.commit()
-                # db.refresh(order)
-
-#                 has_physical = any(item.product.product_type == "physical" for item in order.items)
-#                 if has_physical:
-#                     shipping_info = intent.get("shipping")
-#                     if shipping_info and shipping_info.get("address"):
-#                         country_code = shipping_info["address"].get("country")
-#                         if country_code:
-#                             shipping_entry = (
-#                                 db.query(Shipping)
-#                                 .filter(Shipping.order_id == order.id)
-#                                 .first()
-#                             )
-#                             if not shipping_entry:
-#                                 raise HTTPException(status_code=404, detail="Shipping entry not found for order")
-#                             shipping_entry.country_code = country_code
-#                             db.commit()
-#                             db.refresh(shipping_entry)
-
-#                 try:
-#                     send_order_confirmation_email(order)
-#                 except Exception as e:
-#                     logger.error(f"Failed to send confirmation email: {e}")
-
-#     elif event["type"] == "payment_intent.payment_failed":
-#         intent = event["data"]["object"]
-#         transaction_id = intent["id"]
-
-#         checkout_info = (db.query(CheckoutInfo).filter(CheckoutInfo.transaction_id == transaction_id).first())
-
-#         if checkout_info:
-#             checkout_info.payment_status = "failed"
-#             db.commit()
-
-#     return {"status": "success"}
-
-@payment_router.post("/payment/webhook-test/{order_id}")
-async def stripe_webhook_test(order_id: int, request: Request, db: Session = Depends(get_db)):
-    payload = await request.json()
-
-    event_type = payload.get("type")
-    intent = payload.get("data", {}).get("object", {})
-    transaction_id = intent.get("id")
-
-    checkout_info = db.query(CheckoutInfo).filter(CheckoutInfo.transaction_id == transaction_id, CheckoutInfo.order_id == order_id).first()
-    if not checkout_info:
-        raise HTTPException(status_code=404, detail="Either Order / Transcation ID is Incorrect")
-
-    if checkout_info:
-        checkout_info.payment_status = "succeeded"
-        checkout_info.amount_paid = checkout_info.amount_to_be_paid
-        db.commit()
-        db.refresh(checkout_info)
-
+@payment_router.post("/payment")
+async def payment_endpoint(order_id: int, country_code: str, shipping_type: str = "standard", db: Session = Depends(get_db)):
+    # Load order
     order = db.query(Orders).filter(Orders.id == order_id).first()
-    if order:
-            order.status = StatusType.paid 
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    # Calculate pricing
+    shipping, tax = calculate_order_shipping_and_tax(order, country_code, shipping_type)
+    subtotal = sum(item.price_at_purchase * item.quantity for item in order.items)
+    total = float(subtotal) + float(shipping) + float(tax)
+
+    # Create Stripe PaymentIntent
+    try:
+        intent = stripe.PaymentIntent.create(
+            amount=int(total * 100),  # Stripe expects cents
+            currency="usd",           # adjust if needed
+            metadata={"order_id": str(order.id)},
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Stripe error: {str(e)}")
+
+    # Store checkout info
+    checkout_info = CheckoutInfo(
+        order_id=order.id,
+        transaction_id=intent.id,
+        amount_to_be_paid=total,
+        payment_status="pending",
+    )
+    db.add(checkout_info)
+    db.commit()
+    db.refresh(checkout_info)
+
+    return {
+        "subtotal": subtotal,
+        "shipping": shipping,
+        "tax": tax,
+        "total": total,
+        "client_secret": intent.client_secret,  # needed by frontend
+    }
+
+@payment_router.post("/payment/webhook")
+async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
+    payload = await request.body()
+    sig_header = request.headers.get("stripe-signature")
+
+    try:
+        event = stripe.Webhook.construct_event(payload, sig_header, STRIPE_WEBHOOK_SECRET)
+    except stripe.error.SignatureVerificationError:
+        raise HTTPException(status_code=400, detail="Invalid Stripe signature")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Webhook error: {str(e)}")
+
+    if event["type"] == "payment_intent.succeeded":
+        intent = event["data"]["object"]
+        transaction_id = intent["id"]
+
+        checkout_info = (
+            db.query(CheckoutInfo)
+            .filter(CheckoutInfo.transaction_id == transaction_id)
+            .first()
+        )
+
+        if checkout_info:
+            checkout_info.payment_status = "succeeded"
+            checkout_info.amount_paid = checkout_info.amount_to_be_paid
             db.commit()
-            db.refresh(order)
+            db.refresh(checkout_info)
+
+            order = db.query(Orders).filter(Orders.id == checkout_info.order_id).first()
+            if order:
+                order.status = "paid"
+                db.commit()
+                db.refresh(order)
+
+                # Handle shipping if physical
+                has_physical = any(item.product.product_type == "physical" for item in order.items)
+                if has_physical:
+                    shipping_info = intent.get("shipping")
+                    if shipping_info and shipping_info.get("address"):
+                        country_code = shipping_info["address"].get("country")
+                        if country_code:
+                            shipping_entry = (
+                                db.query(Shipping).filter(Shipping.order_id == order.id).first()
+                            )
+                            if shipping_entry:
+                                shipping_entry.country_code = country_code
+                                db.commit()
+                                db.refresh(shipping_entry)
+
+                # Send email
+                try:
+                    send_order_confirmation_email(order)
+                except Exception as e:
+                    logger.error(f"Failed to send confirmation email: {e}")
+
+    elif event["type"] == "payment_intent.payment_failed":
+        intent = event["data"]["object"]
+        transaction_id = intent["id"]
+
+        checkout_info = (
+            db.query(CheckoutInfo)
+            .filter(CheckoutInfo.transaction_id == transaction_id)
+            .first()
+        )
+
+        if checkout_info:
+            checkout_info.payment_status = "failed"
+            db.commit()
 
     return {"status": "success"}
+
+# @payment_router.post("/payment/webhook-test/{order_id}")
+# async def stripe_webhook_test(order_id: int, request: Request, db: Session = Depends(get_db)):
+#     payload = await request.json()
+
+#     event_type = payload.get("type")
+#     intent = payload.get("data", {}).get("object", {})
+#     transaction_id = intent.get("id")
+
+#     checkout_info = db.query(CheckoutInfo).filter(CheckoutInfo.transaction_id == transaction_id, CheckoutInfo.order_id == order_id).first()
+#     if not checkout_info:
+#         raise HTTPException(status_code=404, detail="Either Order / Transcation ID is Incorrect")
+
+#     if checkout_info:
+#         checkout_info.payment_status = "succeeded"
+#         checkout_info.amount_paid = checkout_info.amount_to_be_paid
+#         db.commit()
+#         db.refresh(checkout_info)
+
+#     order = db.query(Orders).filter(Orders.id == order_id).first()
+#     if order:
+#             order.status = StatusType.paid 
+#             db.commit()
+#             db.refresh(order)
+
+#     return {"status": "success"}
 
 @orders_router.delete("/delete-an-order")
 async def delete_an_order(order_id: Optional[int]= None, customer_name: Optional[str]= None, db: Session = Depends(get_db)):
@@ -320,12 +370,10 @@ async def weight(order_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="No order found")
     
     # Call helper
-    total_weight_g = test(order, db, gsm=300)
+    total_weight_g = calculate_order_weight(order, db, gsm=300)
 
     # Commit changes to DB (product.weight updated)
     db.commit()
 
     return {"order_id": order.id, "total_weight_g": total_weight_g}
 
-
-    
