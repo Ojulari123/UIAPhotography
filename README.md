@@ -54,14 +54,19 @@ It supports **product management, orders, checkout, shipping, payments, and emai
    cd backend
 
 **Create Virtual Environment(Not always neccessary)**
+    
     python3 -m venv venv
+
     source venv/bin/activate 
+
     venv\Scripts\activate     
 
 2. **Install dependencies**
+
    pip install -r requirements.txt
 
 3. **Set up environment variables**
+
     Create a .env file in the root folder:
 
     PGUSER=your_postgres_user
@@ -83,13 +88,15 @@ It supports **product management, orders, checkout, shipping, payments, and emai
     SMTP_PORT=587
 
     SMTP_USER=your_email@example.com
-    
+
     SMTP_PASSWORD=your_email_password
 
 **Run database migrations**
+
     Tables are automatically created when you run the app (via Base.metadata.create_all() in tables.py). If you want migrations: integrate Alembic.
 
 4. **Start Server**
+
     uvicorn main:app --reload
 
 ## Endpoints
