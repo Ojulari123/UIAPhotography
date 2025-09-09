@@ -205,27 +205,23 @@ async def paying_for_order(order_id: int, shipping: Optional[ShippingData], db: 
 
 @payment_router.post("/payment")
 async def payment_endpoint(order_id: int, country_code: str, shipping_type: str = "standard", db: Session = Depends(get_db)):
-    # Load order
     order = db.query(Orders).filter(Orders.id == order_id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
-
-    # Calculate pricing
+    
     shipping, tax = calculate_order_shipping_and_tax(order, country_code, shipping_type)
     subtotal = sum(item.price_at_purchase * item.quantity for item in order.items)
     total = float(subtotal) + float(shipping) + float(tax)
 
-    # Create Stripe PaymentIntent
     try:
         intent = stripe.PaymentIntent.create(
-            amount=int(total * 100),  # Stripe expects cents
-            currency="usd",           # adjust if needed
+            amount=int(total * 100),  
+            currency="usd",           
             metadata={"order_id": str(order.id)},
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Stripe error: {str(e)}")
 
-    # Store checkout info
     checkout_info = CheckoutInfo(
         order_id=order.id,
         transaction_id=intent.id,
@@ -241,7 +237,7 @@ async def payment_endpoint(order_id: int, country_code: str, shipping_type: str 
         "shipping": shipping,
         "tax": tax,
         "total": total,
-        "client_secret": intent.client_secret,  # needed by frontend
+        "client_secret": intent.client_secret,  
     }
 
 @payment_router.post("/payment/webhook")
@@ -278,7 +274,6 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 db.commit()
                 db.refresh(order)
 
-                # Handle shipping if physical
                 has_physical = any(item.product.product_type == "physical" for item in order.items)
                 if has_physical:
                     shipping_info = intent.get("shipping")
@@ -293,7 +288,6 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                 db.commit()
                                 db.refresh(shipping_entry)
 
-                # Send email
                 try:
                     send_order_confirmation_email(order)
                 except Exception as e:
@@ -369,10 +363,8 @@ async def weight(order_id: int, db: Session = Depends(get_db)):
     if not order:
         raise HTTPException(status_code=404, detail="No order found")
     
-    # Call helper
     total_weight_g = calculate_order_weight(order, db, gsm=300)
 
-    # Commit changes to DB (product.weight updated)
     db.commit()
 
     return {"order_id": order.id, "total_weight_g": total_weight_g}

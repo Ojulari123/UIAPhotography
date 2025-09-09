@@ -255,12 +255,11 @@ def get_shipping_price(country_code: str, weight_g: float, shipping_type="standa
     elif weight_g <= 250:
         tier = "100-250"
     else:
-        tier = "100-250"  # fallback for now
+        tier = "100-250" 
 
     country_code = country_code.upper()
     country_prices = ROYAL_MAIL_PRICES[tier].get(country_code, ROYAL_MAIL_PRICES[tier]["OTHER"])
     
-    # Some countries only have "standard"
     if shipping_type not in country_prices:
         shipping_type = "standard"
 
@@ -271,15 +270,14 @@ def calculate_order_shipping_and_tax(order, country_code, shipping_type="standar
     total_weight_g = calculate_order_weight(order, db=None)
     shipping_cost = get_shipping_price(country_code, total_weight_g, shipping_type)
 
-    # Simple tax mapping (5% by default)
     supported_countries = {
-        "US": Decimal("0.05"), "CA": Decimal("0.05"), "UK": Decimal("0.05"),
-        "FR": Decimal("0.05"), "DK": Decimal("0.05"), "AU": Decimal("0.05"),
-        "JP": Decimal("0.05"), "IR": Decimal("0.05"), "BR": Decimal("0.05"),
-        "NG": Decimal("0.05"), "IT": Decimal("0.05"), "DE": Decimal("0.05"),
-        "ES": Decimal("0.05"),
+        "US": Decimal("0.15"), "CA": Decimal("0.15"), "UK": Decimal("0.15"),
+        "FR": Decimal("0.15"), "DK": Decimal("0.15"), "AU": Decimal("0.15"),
+        "JP": Decimal("0.15"), "IR": Decimal("0.15"), "BR": Decimal("0.15"),
+        "NG": Decimal("0.15"), "IT": Decimal("0.15"), "DE": Decimal("0.15"),
+        "ES": Decimal("0.15"),
     }
-    tax_rate = supported_countries.get(country_code.upper(), Decimal("0.05"))
+    tax_rate = supported_countries.get(country_code.upper(), Decimal("0.15"))
 
     subtotal = sum([Decimal(item.price_at_purchase) * item.quantity for item in order.items])
     total_tax = subtotal * tax_rate
