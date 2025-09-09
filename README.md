@@ -54,7 +54,7 @@ It supports **product management, orders, checkout, shipping, payments, and emai
    git clone https://github.com/Ojulari123/UIAPhotography.git
    cd backend
 
-**Create Virtual Environment(Not always neccessary)**
+- **Create Virtual Environment(Not always neccessary)**
     
     python3 -m venv venv
     source venv/bin/activate 
@@ -65,23 +65,32 @@ It supports **product management, orders, checkout, shipping, payments, and emai
    pip install -r requirements.txt
 
 3. **Set up environment variables**
-
-    Create a .env file in the root folder:
+  
+  Create a .env file in the root folder:
 
     PGUSER=your_postgres_user
+
     PGPASSWORD=your_postgres_password
+
     PGDB=your_database_name
+
     PGHOST=localhost
+
     PGPORT=5432
 
     STRIPE_SECRET_KEY=your_stripe_secret
+
     STRIPE_PUBLISHABLE_KEY=your_stripe_publishable
+
     SMTP_HOST=smtp.yourmail.com
+
     SMTP_PORT=587
+
     SMTP_USER=your_email@example.com
+
     SMTP_PASSWORD=your_email_password
 
-**Run database migrations**
+- **Run database migrations**
     Tables are automatically created when you run the app (via Base.metadata.create_all() in tables.py). If you want migrations: integrate Alembic.
 
 4. **Start Server**
