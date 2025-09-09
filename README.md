@@ -57,7 +57,9 @@ It supports **product management, orders, checkout, shipping, payments, and emai
 - **Create Virtual Environment(Not always neccessary)**
     
     python3 -m venv venv
-    source venv/bin/activate 
+
+    source venv/bin/activate
+     
     venv\Scripts\activate     
 
 2. **Install dependencies**
@@ -68,27 +70,27 @@ It supports **product management, orders, checkout, shipping, payments, and emai
   
     Create a .env file in the root folder:
 
-      PGUSER=your_postgres_user
+    PGUSER=your_postgres_user
 
-      PGPASSWORD=your_postgres_password
+    PGPASSWORD=your_postgres_password
 
-      PGDB=your_database_name
+    PGDB=your_database_name
 
-      PGHOST=localhost
+    PGHOST=localhost
 
-      PGPORT=5432
+    PGPORT=5432
 
-      STRIPE_SECRET_KEY=your_stripe_secret
+    STRIPE_SECRET_KEY=your_stripe_secret
 
-      STRIPE_PUBLISHABLE_KEY=your_stripe_publishable
+    STRIPE_PUBLISHABLE_KEY=your_stripe_publishable
 
-      SMTP_HOST=smtp.yourmail.com
+    SMTP_HOST=smtp.yourmail.com
 
-      SMTP_PORT=587
+    SMTP_PORT=587
 
-      SMTP_USER=your_email@example.com
+    SMTP_USER=your_email@example.com
 
-      SMTP_PASSWORD=your_email_password
+    SMTP_PASSWORD=your_email_password
 
 - **Run database migrations**
 
