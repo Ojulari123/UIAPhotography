@@ -20,17 +20,17 @@ It supports **product management, orders, checkout, shipping, payments, and emai
 
 ## 📂 Project Structure
 .
-├── main.py # FastAPI entrypoint (mounts routers)
-├── func.py # Utility functions (slugs, images, emails, shipping, totals)
-├── products.py # Products API routes
-├── purchase.py # Orders, checkout, payments, and email API routes
-├── schemas.py # Pydantic schemas for request/response validation
-├── tables.py # SQLAlchemy models & database session management
-├── requirements.txt # Python dependencies
-├── .env # Environment variables (ignored in Git)
-├── uploads/ # Uploaded product images (runtime-generated)
-├── thumbnails/ # Auto-generated thumbnails (runtime-generated)
-└── README.md # Documentation
+- main.py # ----> FastAPI entrypoint (mounts routers)
+- func.py # ----> Utility functions (slugs, images, emails, shipping, totals)
+- products.py # ----> Products API routes
+- purchase.py # ----> Orders, checkout, payments, and email API routes
+- schemas.py # ----> Pydantic schemas for request/response validation
+- tables.py # ----> SQLAlchemy models & database session management
+- requirements.txt # ----> ython dependencies
+- .env # ----> Environment variables (ignored in Git)
+- uploads/ # ----> Uploaded product images (runtime-generated)
+- thumbnails/ # ----> Auto-generated thumbnails (runtime-generated)
+- README.md # ----> Documentation
 
 ## 🛠️ Tech Stack
 
