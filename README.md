@@ -66,7 +66,7 @@ It supports **product management, orders, checkout, shipping, payments, and emai
 
 3. **Set up environment variables**
   
-  Create a .env file in the root folder:
+    Create a .env file in the root folder:
 
     PGUSER=your_postgres_user
 
@@ -91,6 +91,7 @@ It supports **product management, orders, checkout, shipping, payments, and emai
     SMTP_PASSWORD=your_email_password
 
 - **Run database migrations**
+
     Tables are automatically created when you run the app (via Base.metadata.create_all() in tables.py). If you want migrations: integrate Alembic.
 
 4. **Start Server**
@@ -128,17 +129,25 @@ It supports **product management, orders, checkout, shipping, payments, and emai
 ## 🗄️ Database Models**
 
     Products – Digital/physical products with price, dimensions, metadata
+
     Orders – Customer order info with status (ordered, paid, shipped, delivered)
+
     OrderItems – Products linked to an order
+
     CheckoutInfo – Stripe payment & transaction data
+
     Shipping – Customer shipping address, fee, tax
+    
     ShippingInfo – Tracking details (carrier, tracking number, URL)
 
 ## 📌 Notes
 
     Environment variables are required
+
     Database defaults to PostgreSQL – adjust in tables.py if using another DB.
+
     Thumbnails & uploads – Both are generated and stored locally (consider S3 for production).
+
     Stripe webhooks – must be publicly accessible (use ngrok for local dev).
 
 ## Developed By:
