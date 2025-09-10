@@ -224,6 +224,8 @@ async def payment_endpoint(order_id: int, country_code: str, shipping_type: str 
 
     checkout_info = CheckoutInfo(
         order_id=order.id,
+        customer_name=order.customer_name,
+        email=order.email,
         transaction_id=intent.id,
         amount_to_be_paid=total,
         payment_status="pending",
