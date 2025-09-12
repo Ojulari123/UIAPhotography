@@ -52,8 +52,10 @@ class CheckoutInfo(Base):
     amount_to_be_paid = Column(Numeric(6, 2), nullable=False)                  
     amount_paid = Column(Numeric(6, 2), nullable=False)                     
     currency = Column(String(10), nullable=False, default="GBP")        
-    payment_status = Column(String(50), nullable=False, default="pending")    
-    transaction_id = Column(String(255), unique=True, nullable=False)                         
+    payment_status = Column(Enum(StatusType, name="order_status_enum"),default=StatusType.pending)
+    transaction_id = Column(String(255), unique=True, nullable=False)             
+    shipping_fee = Column(Numeric(6, 2), nullable=False, default=0.00)
+    tax_amount = Column(Numeric(6, 2), nullable=False, default=0.00)            
     collected_at = Column(TIMESTAMP(timezone=True), server_default=func.now()) 
 
     order = relationship("Orders", back_populates="checkout_info")
@@ -66,6 +68,7 @@ class Orders(Base):
     customer_email = Column(String(255), nullable=False)
     status = Column(Enum(StatusType, name="order_status_enum"), nullable=False)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    order_total = Column(Numeric(6, 2), nullable=False, default=0.00)
     
     items = relationship("OrderItem", back_populates="order", cascade="all, delete", passive_deletes=True)
     shipping = relationship("Shipping", uselist=False, back_populates="order", cascade="all, delete", passive_deletes=True)

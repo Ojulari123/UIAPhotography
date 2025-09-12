@@ -9,7 +9,7 @@ import uuid
 import logging
 import stripe
 from tables import Products, CheckoutInfo, Shipping, ShippingInfo
-from schemas import CreateOrder, OrderResponse, OrderItemCreate, OrderItemResponse, CheckoutInfoResponse, ShippingData, CreateShippingInfo, ShippingInfoResponse, StatusType
+from schemas import CreateOrder, OrderResponse, OrderItemResponse, CheckoutInfoResponse, ShippingData, CreateShippingInfo, ShippingInfoResponse, StatusType, PaymentIntentRequest, PaymentIntentResponse, PaymentVerificationRequest, ShippingData, CartItem
 from func import calculate_order_shipping_and_tax, calculate_checkout_total_for_order, send_order_confirmation_email, send_order_status_email, calculate_order_weight
 from tables import get_db, Orders, OrderItem, Products
 from sendgrid import SendGridAPIClient
@@ -31,56 +31,124 @@ STRIPE_API_KEY = os.getenv("STRIPE_PUBLIC_KEY")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
 
 @orders_router.post("/order", response_model=OrderResponse)
-async def create_order(order: CreateOrder, db: Session = Depends(get_db)):
-    product_ids = [item.product_id for item in order.items]
-    unique_ids = set(product_ids)
+async def create_order( order_data: CreateOrder, shipping_type: str = "standard", shipping: Optional[ShippingData] = None, db: Session = Depends(get_db)):
+    if not order_data.items:
+        raise HTTPException(status_code=400, detail="No items provided for order")
 
-    products = db.query(Products).filter(Products.id.in_(unique_ids)).all()
-    if len(products) != len(unique_ids):
-        raise HTTPException(status_code=404, detail="One or more products not found")
-    
     new_order = Orders(
-        customer_name=order.customer_name,
-        customer_email=order.customer_email,
-        status="ordered",
-        created_at=datetime.now()
+        customer_name=order_data.customer_name,
+        customer_email=order_data.customer_email,
+        status=StatusType.ordered.value,
+        created_at=datetime.utcnow()
     )
     db.add(new_order)
     db.commit()
     db.refresh(new_order)
 
     merged_items = {}
-    for item in order.items:
-        key = (item.product_id, item.product_type)
+    for item in order_data.items:
+        product = db.query(Products).filter(Products.id == item.product_id).first()
+        if not product:
+            raise HTTPException(status_code=404, detail=f"Product {item.product_id} not found")
+
+        key = (item.product_id, item.product_type.lower())
         if key in merged_items:
             merged_items[key]["quantity"] += item.quantity
         else:
             merged_items[key] = {
                 "product_id": item.product_id,
-                "product_type": item.product_type,
+                "product_type": item.product_type.lower(),
                 "quantity": item.quantity,
+                "price": Decimal(item.price),
+                "name": product.title 
             }
 
-    for item in merged_items.values():
-        product = None
-        for p in products:
-            if p.id == item["product_id"]:
-                product = p
-                break
+    subtotal = sum(item["price"] * item["quantity"] for item in merged_items.values())
+    has_physical = any(item["product_type"] == "physical" for item in merged_items.values())
 
+    shipping_fee = Decimal("0.0")
+    tax_amount = Decimal("0.0")
+    shipping_entry = None
+    if has_physical:
+        if not shipping:
+            raise HTTPException(status_code=400, detail="Shipping info required for physical items")
+        shipping_fee, tax_amount = calculate_order_shipping_and_tax(list(merged_items.values()), shipping.country_code, shipping_type)
+        shipping_entry = Shipping(
+            order_id=None, 
+            country_code=shipping.country_code,
+            address_line1=shipping.address_line1,
+            address_line2=shipping.address_line2,
+            city=shipping.city,
+            state=shipping.state,
+            postal_code=shipping.postal_code,
+            shipping_fee=float(shipping_fee),
+            tax=float(tax_amount)
+        )
+
+    order_total = subtotal + shipping_fee + tax_amount
+
+    new_order = Orders(
+        customer_name=order_data.customer_name,
+        customer_email=order_data.customer_email,
+        status=StatusType.ordered.value,
+        order_total=float(order_total),
+        created_at=datetime.utcnow()
+    )
+    db.add(new_order)
+    db.commit()
+    db.refresh(new_order)
+
+    new_checkout = CheckoutInfo(
+        order_id=new_order.id,
+        customer_name=order_data.customer_name,
+        email=order_data.customer_email,
+        amount_to_be_paid=order_total,
+        amount_paid=order_total,
+        currency="GBP",
+        shipping_fee=float(shipping_fee),
+        tax_amount=float(tax_amount),
+        payment_status=StatusType.ordered.value,
+        transaction_id=str(uuid.uuid4()),
+    )
+    db.add(new_checkout)
+    db.commit()
+    db.refresh(new_checkout)
+
+    if shipping_entry:
+        shipping_entry.order_id = new_order.id
+        db.add(shipping_entry)
+        db.commit()
+        db.refresh(shipping_entry)
+
+    for item in merged_items.values():
         order_item = OrderItem(
             order_id=new_order.id,
             product_id=item["product_id"],
             product_type=item["product_type"],
-            price_at_purchase=product.price * item["quantity"],
-            quantity=item["quantity"]
+            quantity=item["quantity"],
+            price_at_purchase=float(item["price"] * item["quantity"])
         )
         db.add(order_item)
-
     db.commit()
     db.refresh(new_order)
 
-    return new_order
+    return OrderResponse(
+        id=new_order.id,
+        customer_name=new_order.customer_name,
+        customer_email=new_order.customer_email,
+        status=new_order.status,
+        created_at=new_order.created_at,
+        items=[
+            OrderItemResponse(
+                product_id=item["product_id"],
+                name=item["name"],
+                price=float(item["price"]),
+                quantity=item["quantity"]
+            )
+            for item in merged_items.values()
+        ],
+        order_total=float(order_total) 
+    )
 
 @orders_router.post("/input-shipping-info/{order_id}", response_model=ShippingInfoResponse)
 async def input_shipping_info(order_id: int, text: CreateShippingInfo, db: Session = Depends(get_db)):
@@ -102,8 +170,28 @@ async def input_shipping_info(order_id: int, text: CreateShippingInfo, db: Sessi
 
 @orders_router.get("/view-orders",response_model=List[OrderResponse])
 async def view_orders_table(db: Session = Depends(get_db)):
-    order_table_query = db.query(Orders).all()
-    return order_table_query
+    orders = db.query(Orders).all()
+    order_responses = []
+    for order in orders:
+        items = [
+            OrderItemResponse(
+                product_id=item.product_id,
+                name=item.product.title, 
+                price=float(item.price_at_purchase),  
+                quantity=item.quantity
+            )
+            for item in order.items
+        ]
+
+        order_responses.append(OrderResponse(
+            id=order.id,
+            customer_name=order.customer_name,
+            status=order.status,
+            items=items,
+            order_total=float(order.order_total)            
+        ))
+
+    return order_responses
 
 @email_router.post("/send-order-confirmation/{order_id}")
 async def order_confirmation_via_email(order_id:int, db: Session = Depends(get_db)):
@@ -153,94 +241,78 @@ async def calculate_checkout_endpoint(order_id: Optional[int] = None, customer_n
     checkout_info = calculate_checkout_total_for_order(order, db)
     return checkout_info
 
-@payment_router.post("/payment/{order_id}", response_model=dict)
-async def paying_for_order(order_id: int, shipping: Optional[ShippingData], db: Session = Depends(get_db)):
-    order = db.query(Orders).filter(Orders.id == order_id).first()
-    if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
+@payment_router.post("/payment/create-intent", response_model=PaymentIntentResponse)
+async def create_payment_intent(data: PaymentIntentRequest, db: Session = Depends(get_db)):
+    subtotal = sum(item.price * item.quantity for item in data.items)
 
-    has_physical = any(item.product_type == "physical" for item in order.items)
-
+    has_physical = any(item.product_type == "physical" for item in data.items)
     shipping_fee = Decimal("0.0")
     tax = Decimal("0.0")
 
     if has_physical:
-        if not shipping:
+        if not data.shipping:
             raise HTTPException(status_code=400, detail="Shipping info required for physical items")
-        
-        shipping_fee, tax = calculate_order_shipping_and_tax(order.items, shipping.country_code)
-        shipping_record = Shipping(
-            order_id=order.id,
-            country_code=shipping.country_code,
-            address_line1=shipping.address_line1,
-            address_line2=shipping.address_line2,
-            city=shipping.city,
-            state=shipping.state,
-            postal_code=shipping.postal_code,
-            shipping_fee=shipping_fee,
-            tax=tax
-        )
-        db.add(shipping_record)
+        shipping_fee, tax = calculate_order_shipping_and_tax(data.items, data.shipping.country_code)
 
-    db.commit()
-
-    checkout_info = calculate_checkout_total_for_order(order, db)
-
-    stripe.api_key = STRIPE_API_KEY
-    payment_intent = stripe.PaymentIntent.create(
-        amount=int(checkout_info.amount_to_be_paid * 100), 
-        currency=checkout_info.currency.lower(),
-        metadata={"order_id": order.id, "customer_name": order.customer_name}
-    )
-
-    checkout_info.transaction_id = payment_intent.id
-    db.commit()
-    db.refresh(checkout_info)
-
-    checkout_info_data = CheckoutInfoResponse.model_validate(checkout_info, from_attributes=True)
-
-    return {"checkout_info": checkout_info_data.model_dump(), "client_secret": payment_intent.client_secret}
-
-
-
-@payment_router.post("/payment")
-async def payment_endpoint(order_id: int, country_code: str, shipping_type: str = "standard", db: Session = Depends(get_db)):
-    order = db.query(Orders).filter(Orders.id == order_id).first()
-    if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
-    
-    shipping, tax = calculate_order_shipping_and_tax(order, country_code, shipping_type)
-    subtotal = sum(item.price_at_purchase * item.quantity for item in order.items)
-    total = float(subtotal) + float(shipping) + float(tax)
+    order_total = subtotal + float(shipping_fee) + float(tax)
 
     try:
+        stripe.api_key = STRIPE_API_KEY
         intent = stripe.PaymentIntent.create(
-            amount=int(total * 100),  
-            currency="usd",           
-            metadata={"order_id": str(order.id)},
+            amount=int(order_total * 100),
+            currency="GBP",
+            metadata={
+                "customer_name": data.customer.name,
+                "customer_email": data.customer.email,
+            },
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Stripe error: {str(e)}")
+    
+    order_items_list = []
+    for item in data.items:
+        product = db.query(Products).filter_by(id=item.product_id).first()
+        if not product:
+            raise HTTPException(status_code=404, detail=f"Product {item.product_id} not found")
+        order_items_list.append(
+            OrderItem(
+                product_id=product.id,
+                product_type=item.product_type,
+                price_at_purchase=float(item.price),
+                quantity=item.quantity
+            )
+        )
+
+    order = Orders(
+        customer_name=data.customer.name,
+        customer_email=data.customer.email,
+        status=StatusType.pending,
+        order_total=order_total,
+        items=order_items_list
+    )
 
     checkout_info = CheckoutInfo(
-        order_id=order.id,
-        customer_name=order.customer_name,
-        email=order.customer_email,
+        order=order,
+        customer_name=data.customer.name,
+        email=data.customer.email,
         transaction_id=intent.id,
-        amount_to_be_paid=total,
-        payment_status="pending",
+        amount_to_be_paid=order_total,
+        amount_paid=0.0,
+        currency="GBP",
+        payment_status=StatusType.pending,
+        shipping_fee=float(shipping_fee),
+        tax_amount=float(tax)
     )
+
     db.add(checkout_info)
     db.commit()
     db.refresh(checkout_info)
 
-    return {
-        "subtotal": subtotal,
-        "shipping": shipping,
-        "tax": tax,
-        "total": total,
-        "client_secret": intent.client_secret,  
-    }
+    return PaymentIntentResponse(
+        client_secret=intent.client_secret,
+        amount=order_total,
+        currency="GBP"
+    )
 
 @payment_router.post("/payment/webhook")
 async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
@@ -258,55 +330,76 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         intent = event["data"]["object"]
         transaction_id = intent["id"]
 
-        checkout_info = (
-            db.query(CheckoutInfo)
-            .filter(CheckoutInfo.transaction_id == transaction_id)
-            .first()
-        )
-
+        checkout_info = db.query(CheckoutInfo).filter(CheckoutInfo.transaction_id == transaction_id).first()
         if checkout_info:
-            checkout_info.payment_status = "succeeded"
+            checkout_info.payment_status = StatusType.succeeded.value
             checkout_info.amount_paid = checkout_info.amount_to_be_paid
             db.commit()
             db.refresh(checkout_info)
 
-            order = db.query(Orders).filter(Orders.id == checkout_info.order_id).first()
-            if order:
-                order.status = "paid"
-                db.commit()
-                db.refresh(order)
-
-                has_physical = any(item.product.product_type == "physical" for item in order.items)
-                if has_physical:
-                    shipping_info = intent.get("shipping")
-                    if shipping_info and shipping_info.get("address"):
-                        country_code = shipping_info["address"].get("country")
-                        if country_code:
-                            shipping_entry = (
-                                db.query(Shipping).filter(Shipping.order_id == order.id).first()
-                            )
-                            if shipping_entry:
-                                shipping_entry.country_code = country_code
-                                db.commit()
-                                db.refresh(shipping_entry)
-
+            if not checkout_info.order_id:
                 try:
-                    send_order_confirmation_email(order)
+                    new_order = Orders(
+                        customer_name=checkout_info.customer_name,
+                        customer_email=checkout_info.email,
+                        status=StatusType.ordered.value,
+                        created_at=datetime.utcnow(),
+                        order_total=checkout_info.amount_to_be_paid,
+                    )
+                    db.add(new_order)
+                    db.commit()
+                    db.refresh(new_order)
+
+                    checkout_info.order_id = new_order.id
+                    db.commit()
+                    db.refresh(checkout_info)
+
+                    if hasattr(checkout_info, "items") and checkout_info.items:
+                        for item in checkout_info.items:
+                            order_item = OrderItem(
+                                order_id=new_order.id,
+                                product_id=item["product_id"],
+                                product_type=item["product_type"],
+                                quantity=item["quantity"],
+                                price_at_purchase=float(item["price"] * item["quantity"])
+                            )
+                            db.add(order_item)
+                        db.commit()
+
+                    has_physical = any(item.get("product_type") == "physical" for item in getattr(checkout_info, "items", []))
+                    if has_physical and intent.get("shipping"):
+                        shipping_info = intent["shipping"]
+                        shipping_address = shipping_info.get("address", {})
+                        shipping_record = Shipping(
+                            order_id=new_order.id,
+                            country_code=shipping_address.get("country"),
+                            address_line1=shipping_address.get("line1"),
+                            address_line2=shipping_address.get("line2"),
+                            city=shipping_address.get("city"),
+                            state=shipping_address.get("state"),
+                            postal_code=shipping_address.get("postal_code"),
+                            shipping_fee=checkout_info.shipping_fee if hasattr(checkout_info, "shipping_fee") else 0.0,
+                            tax=checkout_info.tax_amount if hasattr(checkout_info, "tax_amount") else 0.0
+                        )
+                        db.add(shipping_record)
+                        db.commit()
+                        db.refresh(shipping_record)
+
+                    try:
+                        send_order_confirmation_email(new_order)
+                    except Exception as e:
+                        print(f"Failed to send order confirmation email: {e}")
+
                 except Exception as e:
-                    logger.error(f"Failed to send confirmation email: {e}")
+                    print(f"Error creating order from webhook (will retry next webhook call): {e}")
+                    db.rollback()
 
     elif event["type"] == "payment_intent.payment_failed":
         intent = event["data"]["object"]
         transaction_id = intent["id"]
-
-        checkout_info = (
-            db.query(CheckoutInfo)
-            .filter(CheckoutInfo.transaction_id == transaction_id)
-            .first()
-        )
-
+        checkout_info = db.query(CheckoutInfo).filter(CheckoutInfo.transaction_id == transaction_id).first()
         if checkout_info:
-            checkout_info.payment_status = "failed"
+            checkout_info.payment_status = StatusType.failed.value
             db.commit()
 
     return {"status": "success"}
@@ -324,7 +417,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
 #         raise HTTPException(status_code=404, detail="Either Order / Transcation ID is Incorrect")
 
 #     if checkout_info:
-#         checkout_info.payment_status = "succeeded"
+#         checkout_info.payment_status = StatusType.succeeded.value
 #         checkout_info.amount_paid = checkout_info.amount_to_be_paid
 #         db.commit()
 #         db.refresh(checkout_info)

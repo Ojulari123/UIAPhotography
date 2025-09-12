@@ -14,8 +14,10 @@ class ProductType(enum.Enum):
     physical = "physical"
 
 class StatusType(enum.Enum):
+    pending = "pending"
     ordered = "ordered"
-    paid = "paid"
+    succeeded = "succeeded"
+    failed = "failed"
     shipped = "shipped"
     delivered = "delivered"
 
@@ -73,20 +75,6 @@ class EditProductsData(BaseModel):
     file_size_mb: Optional[Annotated[float, FileSizeType]] = None
     file_format: Optional[str] = None 
 
-class OrderItemCreate(BaseModel):
-    product_id: int
-    product_type: ProductType
-    quantity: int
-    price_at_purchase: float
-
-class OrderItemResponse(BaseModel):
-    product_id: int
-    quantity: int
-    price_at_purchase: float
-
-    model_config = {
-        "from_attributes": True
-    }
 
 class ShippingData(BaseModel):
     country_code: str
@@ -110,18 +98,34 @@ class ShippingResponse(ShippingData):
         "from_attributes": True
     }
 
+class CartItem(BaseModel):
+    product_id: int
+    name: str
+    price: float
+    quantity: int
+    product_type: ProductType 
+
+
 class CreateOrder(BaseModel):
     customer_name: str
     customer_email: EmailStr
-    items: List[OrderItemCreate]
+    items: List[CartItem]
+
+class OrderItemResponse(BaseModel):
+    product_id: int
+    name: str                
+    price: float            
+    quantity: int
+
+    class Config:
+        orm_mode = True 
 
 class OrderResponse(BaseModel):
     id: int
     customer_name: str
-    customer_email: EmailStr
     status: StatusType
-    created_at: datetime
-    items: List[OrderItemCreate]
+    items: List[OrderItemResponse]
+    order_total: float
 
     model_config = {
         "from_attributes": True
@@ -168,3 +172,32 @@ class ShippingInfoResponse(BaseModel):
     model_config = {
         "from_attributes": True
     }
+
+class CustomerData(BaseModel):
+    name: str
+    email: EmailStr
+    phone: Optional[str] = None
+
+class ShippingData(BaseModel):
+    country_code: str
+    address_line1: str
+    address_line2: Optional[str] = None
+    city: str
+    state: str
+    postal_code: str
+
+class PaymentIntentRequest(BaseModel):
+    order_id: int
+    currency: str = "GBP"
+    items: List[CartItem]
+    customer: CustomerData
+    shipping: Optional[ShippingData] = None
+
+class PaymentIntentResponse(BaseModel):
+    client_secret: str
+    amount: float
+    currency: str
+
+class PaymentVerificationRequest(BaseModel):
+    transaction_id: str  
+    status: str          
