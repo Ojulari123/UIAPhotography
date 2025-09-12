@@ -27,7 +27,7 @@ email_router = APIRouter()
 checkout_router = APIRouter()
 
 load_dotenv()
-STRIPE_API_KEY = os.getenv("STRIPE_PUBLIC_KEY")
+STRIPE_API_KEY = os.getenv("STRIPE_SECRET_KEY")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
 
 @orders_router.post("/order", response_model=OrderResponse)
