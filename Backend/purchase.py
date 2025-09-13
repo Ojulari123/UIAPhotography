@@ -27,7 +27,7 @@ email_router = APIRouter()
 checkout_router = APIRouter()
 
 load_dotenv()
-STRIPE_API_KEY = os.getenv("STRIPE_SECRET_KEY")
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
 
 @orders_router.post("/order", response_model=OrderResponse)
@@ -257,7 +257,7 @@ async def create_payment_intent(data: PaymentIntentRequest, db: Session = Depend
     order_total = subtotal + float(shipping_fee) + float(tax)
 
     try:
-        stripe.api_key = STRIPE_API_KEY
+        stripe.api_key = stripe.api_key
         intent = stripe.PaymentIntent.create(
             amount=int(order_total * 100),
             currency="GBP",
