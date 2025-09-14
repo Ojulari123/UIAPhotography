@@ -14,7 +14,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from tables import Orders, OrderItem, Shipping, CheckoutInfo, ShippingInfo, Products
 from email.mime.multipart import MIMEMultipart
-from schemas import DimensionType, DIMENSION_DETAILS
+from schemas import DimensionType, DIMENSION_DETAILS, ProductType
 from email.mime.text import MIMEText
 from dotenv import load_dotenv
 
@@ -135,21 +135,28 @@ def send_order_status_email(order: Orders, db):
 
     logger.info(f"Order shipped email sent to {order.customer_email} for order_id {order.id}")
 
-def calculate_order_weight(order, db: Session, gsm: float = 300):
+def calculate_order_weight(order_or_items, db: Session, gsm: float = 300):
+    items = getattr(order_or_items, "items", order_or_items)
     total_weight_g = 0
 
-    for item in order.items:
-        if item.product_type.value != "physical":
+    for item in items:
+        product_type = getattr(item, "product_type", None)
+        if product_type is None:
             continue
 
-        product = item.product
+        type_value = getattr(product_type, "value", product_type) if hasattr(product_type, "value") else product_type
+        if str(type_value).lower() != "physical":
+            continue
+        
+        product = getattr(item, "product", None)
         if not product:
             continue
 
-        if not product.dimensions:
+        dimensions = getattr(product, "dimensions", None)
+        if not dimensions:
             continue
 
-        key = product.dimensions.value.strip().upper()
+        key = getattr(dimensions, "value", str(dimensions)).strip().upper()
         dimension_str = DIMENSION_DETAILS.get(key)
         if not dimension_str:
             continue
@@ -162,8 +169,8 @@ def calculate_order_weight(order, db: Session, gsm: float = 300):
         length_cm = float(match.group(2))
 
         single_weight_g = (length_cm * width_cm * gsm / 10000)
-        item_total_weight = single_weight_g * item.quantity
-        product.weight = item_total_weight
+        quantity = getattr(item, "quantity", 1)
+        item_total_weight = single_weight_g * quantity
         total_weight_g += item_total_weight
 
     return total_weight_g
@@ -265,9 +272,14 @@ def get_shipping_price(country_code: str, weight_g: float, shipping_type="standa
 
     return country_prices[shipping_type]
 
-def calculate_order_shipping_and_tax(order, country_code, shipping_type="standard"):
+def calculate_order_shipping_and_tax(order_or_items, country_code, shipping_type="standard"):
    
-    total_weight_g = calculate_order_weight(order, db=None)
+    if hasattr(order_or_items, "items"):
+            items_to_process = order_or_items.items
+    else:
+        items_to_process = order_or_items
+
+    total_weight_g = calculate_order_weight(items_to_process, db=None)
     shipping_cost = get_shipping_price(country_code, total_weight_g, shipping_type)
 
     supported_countries = {
@@ -279,7 +291,7 @@ def calculate_order_shipping_and_tax(order, country_code, shipping_type="standar
     }
     tax_rate = supported_countries.get(country_code.upper(), Decimal("0.15"))
 
-    subtotal = sum([Decimal(item.price_at_purchase) * item.quantity for item in order.items])
+    subtotal = sum([Decimal(getattr(item, "price_at_purchase", item.price)) * item.quantity for item in items_to_process])
     total_tax = subtotal * tax_rate
 
     return shipping_cost, total_tax

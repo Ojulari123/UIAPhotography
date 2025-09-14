@@ -116,6 +116,7 @@ class OrderItemResponse(BaseModel):
     name: str                
     price: float            
     quantity: int
+    product_type: ProductType
 
     class Config:
         orm_mode = True 

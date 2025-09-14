@@ -59,6 +59,7 @@ class CheckoutInfo(Base):
     collected_at = Column(TIMESTAMP(timezone=True), server_default=func.now()) 
 
     order = relationship("Orders", back_populates="checkout_info")
+    items = relationship("OrderItem", back_populates="checkout_info")
 
 class Orders(Base):
     __tablename__ = "Orders"
@@ -84,9 +85,11 @@ class OrderItem(Base):
     product_type = Column(Enum(ProductType, name="product_type_enum"), nullable=False)
     price_at_purchase = Column(Numeric(6, 2), nullable=False)
     quantity = Column(Integer, nullable=False)
+    checkout_info_id = Column(Integer, ForeignKey("Checkout_Info.id")) 
 
     order = relationship("Orders", back_populates="items", foreign_keys=[order_id])
     product = relationship("Products", foreign_keys=[product_id])
+    checkout_info = relationship("CheckoutInfo", back_populates="items")
 
 class Shipping(Base):
     __tablename__ = "Shipping"
