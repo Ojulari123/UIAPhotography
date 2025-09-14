@@ -27,8 +27,6 @@ email_router = APIRouter()
 checkout_router = APIRouter()
 
 load_dotenv()
-stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
 
 @orders_router.post("/order", response_model=OrderResponse)
 async def create_order( order_data: CreateOrder, shipping_type: str = "standard", shipping: Optional[ShippingData] = None, db: Session = Depends(get_db)):
@@ -51,13 +49,13 @@ async def create_order( order_data: CreateOrder, shipping_type: str = "standard"
         if not product:
             raise HTTPException(status_code=404, detail=f"Product {item.product_id} not found")
 
-        key = (item.product_id, item.product_type.lower())
+        key = (item.product_id, item.product_type.value.lower())
         if key in merged_items:
             merged_items[key]["quantity"] += item.quantity
         else:
             merged_items[key] = {
                 "product_id": item.product_id,
-                "product_type": item.product_type.lower(),
+                "product_type": item.product_type.value.lower(),
                 "quantity": item.quantity,
                 "price": Decimal(item.price),
                 "name": product.title 
@@ -243,6 +241,8 @@ async def calculate_checkout_endpoint(order_id: Optional[int] = None, customer_n
 
 @payment_router.post("/payment/create-intent", response_model=PaymentIntentResponse)
 async def create_payment_intent(data: PaymentIntentRequest, db: Session = Depends(get_db)):
+    stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+
     subtotal = sum(item.price * item.quantity for item in data.items)
 
     has_physical = any(item.product_type == "physical" for item in data.items)
@@ -316,6 +316,8 @@ async def create_payment_intent(data: PaymentIntentRequest, db: Session = Depend
 
 @payment_router.post("/payment/webhook")
 async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
+    STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
+    
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature")
 
