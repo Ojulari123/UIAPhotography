@@ -332,7 +332,9 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         intent = event["data"]["object"]
         transaction_id = intent["id"]
 
-        checkout_info = db.query(CheckoutInfo).filter(CheckoutInfo.transaction_id == transaction_id).first()
+        print("Event transaction_id:", intent["id"])
+        checkout_info = db.query(CheckoutInfo).filter(CheckoutInfo.transaction_id == intent["id"]).first()
+        print("CheckoutInfo found:", checkout_info)
         if checkout_info:
             checkout_info.payment_status = StatusType.succeeded.value
             checkout_info.amount_paid = checkout_info.amount_to_be_paid
