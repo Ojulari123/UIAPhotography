@@ -10,7 +10,8 @@ import logging
 import stripe
 from tables import get_db, Products, CheckoutInfo, Shipping, ShippingInfo, Orders, OrderItem
 from schemas import CreateOrder, OrderResponse, OrderItemResponse, CheckoutInfoResponse, ProductType, ShippingData, CreateShippingInfo, ShippingInfoResponse, StatusType, PaymentIntentRequest, PaymentIntentResponse, PaymentVerificationRequest, ShippingData, CartItem
-from func import calculate_order_shipping_and_tax, calculate_checkout_total_for_order, send_order_confirmation_email, send_order_status_email, calculate_order_weight, generate_signed_cloudinary_url, reset_primary_key_sequence
+from func import calculate_order_shipping_and_tax, calculate_checkout_total_for_order, send_order_confirmation_email, send_order_status_email, calculate_order_weight, generate_signed_cloudinary_url
+# from func import reset_primary_key_sequence
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 from typing import Optional, List
@@ -148,10 +149,10 @@ async def create_order( order_data: CreateOrder, shipping_type: str = "standard"
         ],
         order_total=float(order_total) 
     )
-@orders_router.post("/reset-number")
-async def reset_primary_key_sequence():
-    reset_primary_key_sequence()
-    return{"detail":"noicee"}
+# @orders_router.post("/reset-number")
+# async def reset_primary_key_sequence():
+#     reset_primary_key_sequence()
+#     return{"detail":"noicee"}
 
 @orders_router.post("/input-shipping-info/{order_id}", response_model=ShippingInfoResponse)
 async def input_shipping_info(order_id: int, text: CreateShippingInfo, db: Session = Depends(get_db)):
@@ -245,12 +246,12 @@ async def calculate_checkout_endpoint(order_id: Optional[int] = None, customer_n
     checkout_info = calculate_checkout_total_for_order(order, db)
     return checkout_info
 
-@checkout_router.delete("/delete-all-checkout")
-async def delete_all_checkout(db: Session = Depends(get_db)):
-    delete_checkout = db.query(CheckoutInfo).delete()
+# @checkout_router.delete("/delete-all-checkout")
+# async def delete_all_checkout(db: Session = Depends(get_db)):
+#     delete_checkout = db.query(CheckoutInfo).delete()
 
-    db.commit()
-    return {"detail": f"Deleted all the checkout info from the CheckoutInfo table"}
+#     db.commit()
+#     return {"detail": f"Deleted all the checkout info from the CheckoutInfo table"}
 
 @payment_router.post("/payment/create-intent", response_model=PaymentIntentResponse)
 async def create_payment_intent(data: PaymentIntentRequest, db: Session = Depends(get_db)):
@@ -475,11 +476,11 @@ async def delete_an_order(order_id: Optional[int]= None, customer_name: Optional
     db.commit()
     return {"detail": f"Order ID {order_id or ''} / Customer {customer_name or ''} has been deleted"}
 
-@orders_router.delete("/delete-all-orderitems")
-async def delete_all_orderitems(db: Session = Depends(get_db)):
-    delete = db.query(OrderItem).delete()
-    db.commit()
-    return{"detail": "deleted all order items from the OrderItems table"}
+# @orders_router.delete("/delete-all-orderitems")
+# async def delete_all_orderitems(db: Session = Depends(get_db)):
+#     delete = db.query(OrderItem).delete()
+#     db.commit()
+#     return{"detail": "deleted all order items from the OrderItems table"}
 
 @orders_router.delete("/delete-all-orders")
 async def delete_all_orders(db: Session = Depends(get_db)):

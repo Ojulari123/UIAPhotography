@@ -382,15 +382,7 @@ def generate_signed_cloudinary_url(original_url: str, expiry_seconds: int = 3600
     public_id = extract_public_id_from_url(original_url)
     if not public_id:
         return original_url 
-
-    # signed_url, _ = cloudinary.utils.cloudinary_url(
-    #     public_id,
-    #     resource_type="image",
-    #     type="authenticated",
-    #     sign_url=True,
-    #     expires_at=int(time.time()) + expiry_seconds
-    # )
-
+    
     signed_url, _ = cloudinary.utils.cloudinary_url(
         public_id,
         resource_type="image",
@@ -398,14 +390,14 @@ def generate_signed_cloudinary_url(original_url: str, expiry_seconds: int = 3600
     )
     return signed_url
 
-def reset_primary_key_sequence():
-    db = Orders()  # create an active DB session
-    try:
-        db.execute(text('ALTER SEQUENCE "Photos_id_seq" RESTART WITH 1'))
-        db.commit()
-        print("✅ Sequence reset successfully")
-    except Exception as e:
-        db.rollback()
-        print("❌ Error resetting sequence:", e)
-    finally:
-        db.close()
+# def reset_primary_key_sequence():
+#     db = Orders()  # create an active DB session
+#     try:
+#         db.execute(text('ALTER SEQUENCE "Photos_id_seq" RESTART WITH 1'))
+#         db.commit()
+#         print("✅ Sequence reset successfully")
+#     except Exception as e:
+#         db.rollback()
+#         print("❌ Error resetting sequence:", e)
+#     finally:
+#         db.close()
