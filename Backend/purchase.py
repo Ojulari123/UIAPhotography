@@ -8,16 +8,16 @@ from dotenv import load_dotenv
 import uuid
 import logging
 import stripe
-from tables import Products, CheckoutInfo, Shipping, ShippingInfo
+from tables import get_db, Products, CheckoutInfo, Shipping, ShippingInfo, Orders, OrderItem
 from schemas import CreateOrder, OrderResponse, OrderItemResponse, CheckoutInfoResponse, ProductType, ShippingData, CreateShippingInfo, ShippingInfoResponse, StatusType, PaymentIntentRequest, PaymentIntentResponse, PaymentVerificationRequest, ShippingData, CartItem
-from func import calculate_order_shipping_and_tax, calculate_checkout_total_for_order, send_order_confirmation_email, send_order_status_email, calculate_order_weight
-from tables import get_db, Orders, OrderItem, Products
+from func import calculate_order_shipping_and_tax, calculate_checkout_total_for_order, send_order_confirmation_email, send_order_status_email, calculate_order_weight, generate_signed_cloudinary_url, reset_primary_key_sequence
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 from typing import Optional, List
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from decimal import Decimal
+from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
 
@@ -148,6 +148,10 @@ async def create_order( order_data: CreateOrder, shipping_type: str = "standard"
         ],
         order_total=float(order_total) 
     )
+@orders_router.post("/reset-number")
+async def reset_primary_key_sequence():
+    reset_primary_key_sequence()
+    return{"detail":"noicee"}
 
 @orders_router.post("/input-shipping-info/{order_id}", response_model=ShippingInfoResponse)
 async def input_shipping_info(order_id: int, text: CreateShippingInfo, db: Session = Depends(get_db)):
@@ -200,7 +204,7 @@ async def order_confirmation_via_email(order_id:int, db: Session = Depends(get_d
         raise HTTPException(status_code=404, detail="Order not found")
 
     try:
-        send_order_confirmation_email(order)
+        send_order_confirmation_email(order, db)
     except Exception as e:
         logger.error(f"Failed to send email for order_id {order_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to send email: {str(e)}")
@@ -241,6 +245,13 @@ async def calculate_checkout_endpoint(order_id: Optional[int] = None, customer_n
     checkout_info = calculate_checkout_total_for_order(order, db)
     return checkout_info
 
+@checkout_router.delete("/delete-all-checkout")
+async def delete_all_checkout(db: Session = Depends(get_db)):
+    delete_checkout = db.query(CheckoutInfo).delete()
+
+    db.commit()
+    return {"detail": f"Deleted all the checkout info from the CheckoutInfo table"}
+
 @payment_router.post("/payment/create-intent", response_model=PaymentIntentResponse)
 async def create_payment_intent(data: PaymentIntentRequest, db: Session = Depends(get_db)):
     stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
@@ -250,10 +261,6 @@ async def create_payment_intent(data: PaymentIntentRequest, db: Session = Depend
     has_physical = any(getattr(item.product_type, "value", item.product_type) == ProductType.physical.value for item in data.items )
     shipping_fee = Decimal("0.0")
     tax = Decimal("0.0")
-
-    print("DEBUG: has_physical =", has_physical)
-    for i, item in enumerate(data.items, start=1):
-        print(f"DEBUG: Item {i} -> product_type: {item.product_type}, price: {item.price}, quantity: {item.quantity}")
 
     shipping_payload = None
     if has_physical:
@@ -287,8 +294,6 @@ async def create_payment_intent(data: PaymentIntentRequest, db: Session = Depend
             },
             shipping=shipping_payload 
         )
-        print("DEBUG: shipping_payload =", shipping_payload)
-        print("DEBUG: Stripe PaymentIntent shipping =", intent.shipping)
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Stripe error: {str(e)}")
@@ -394,7 +399,6 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 new_order = db.query(Orders).filter(Orders.id == checkout_info.order_id).first()
 
             has_physical = any(getattr(item.product_type, "value", str(item.product_type)).lower() == "physical" for item in new_order.items)
-            
             if has_physical:
                 shipping_info = intent.get("shipping")
                 if shipping_info:
@@ -412,11 +416,8 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                     )
                     db.add(shipping_record)
                     db.flush()
-                    print("Shipping record created:", shipping_record)
-                else:
-                    print("DEBUG: intent.shipping is None, cannot create shipping record")
 
-            send_order_confirmation_email(new_order)
+            send_order_confirmation_email(new_order,db)
 
         except Exception as e:
             db.rollback() 
@@ -473,7 +474,13 @@ async def delete_an_order(order_id: Optional[int]= None, customer_name: Optional
     db.delete(delete_order_query)
     db.commit()
     return {"detail": f"Order ID {order_id or ''} / Customer {customer_name or ''} has been deleted"}
-    
+
+@orders_router.delete("/delete-all-orderitems")
+async def delete_all_orderitems(db: Session = Depends(get_db)):
+    delete = db.query(OrderItem).delete()
+    db.commit()
+    return{"detail": "deleted all order items from the OrderItems table"}
+
 @orders_router.delete("/delete-all-orders")
 async def delete_all_orders(db: Session = Depends(get_db)):
     delete_orders = db.query(Orders).delete()

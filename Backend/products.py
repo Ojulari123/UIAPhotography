@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Form, File, UploadFile, Body
 from sqlalchemy.orm import Session
+import cloudinary
+import cloudinary.uploader
 from tables import Products, CheckoutInfo
 from schemas import AddProductsbyUrlInfo, ProductsData, AddProductMetafield, EditProductsData
 from tables import get_db, OrderItem
@@ -18,14 +20,20 @@ async def add_new_photos_via_url(text: AddProductsbyUrlInfo, db: Session = Depen
     if db.query(Products).filter(Products.slug == generate_slug(text.title)).first():
         raise HTTPException(status_code=400, detail="Slug already exists. Please change the title.")
 
+    upload_result = cloudinary.uploader.upload(
+        str(text.image_url),
+        folder="uploads",
+        resource_type="image",
+        overwrite=True,
+    )
+    thumbnail_info = create_thumbnail(image_url=str(text.image_url))
+
     add_new_products = Products(
         title=text.title,
         slug=generate_slug(text.title),
         description=text.description,
-        image_url=str(text.image_url),
-        thumbnail_url=create_thumbnail(image_url=text.image_url),
-        image_file=None,
-        thumbnail_file=None,
+        image_url=upload_result["secure_url"],
+        thumbnail_url=thumbnail_info["cloudinary_thumbnail_url"],
         price=text.price,
         is_for_sale=text.is_for_sale,
         dimensions=text.dimensions,
@@ -41,7 +49,7 @@ async def add_new_photos_via_url(text: AddProductsbyUrlInfo, db: Session = Depen
     return add_new_products
 
 @products_router.post("/add-photos-file", response_model=ProductsData)
-async def add_new_photos_via_file_upload(title: str = Form(...), description: Optional[str] = Form(None), price: float = Form(...), is_for_sale: bool = Form(True), image_file: UploadFile = File(...), thumbnail_file: Optional[UploadFile] = File(None), dimensions : Optional[str] = File(None), db: Session = Depends(get_db)):
+async def add_new_photos_via_file_upload(title: str = Form(...), description: Optional[str] = Form(None), price: float = Form(...), is_for_sale: bool = Form(True), image_file: UploadFile = File(...), dimensions : Optional[str] = Form(None), db: Session = Depends(get_db)):
     add_info_query = db.query(Products).filter(Products.title == title).first()
 
     if add_info_query:
@@ -54,17 +62,15 @@ async def add_new_photos_via_file_upload(title: str = Form(...), description: Op
         raise HTTPException(status_code=400, detail="Slug already exists. Please change the title.")
     
     saved_image_file = save_upload_file(image_file)
-    saved_thumbnail_file = create_thumbnail(image_file=image_file)
+    saved_thumbnail_file = create_thumbnail(image_path=saved_image_file["local_path"])
 
     add_new_products = Products(
         title=title,
         slug=generate_slug(title),
         description=description,
-        image_url=None,
-        thumbnail_url=None,
-        image_file=saved_image_file,
+        image_url=saved_image_file["cloudinary_url"],
+        thumbnail_url=saved_thumbnail_file["cloudinary_thumbnail_url"],
         dimensions=dimensions,
-        thumbnail_file= saved_thumbnail_file,
         price=price,
         is_for_sale=is_for_sale
     )

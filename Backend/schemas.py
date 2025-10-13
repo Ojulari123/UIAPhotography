@@ -188,7 +188,6 @@ class ShippingData(BaseModel):
     postal_code: str
 
 class PaymentIntentRequest(BaseModel):
-    order_id: int
     currency: str = "GBP"
     items: List[CartItem]
     customer: CustomerData

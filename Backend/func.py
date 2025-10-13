@@ -10,6 +10,9 @@ from datetime import datetime
 import uuid
 import logging
 import smtplib
+import cloudinary
+import cloudinary.uploader
+import time
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from tables import Orders, OrderItem, Shipping, CheckoutInfo, ShippingInfo, Products
@@ -17,6 +20,7 @@ from email.mime.multipart import MIMEMultipart
 from schemas import DimensionType, DIMENSION_DETAILS, ProductType
 from email.mime.text import MIMEText
 from dotenv import load_dotenv
+from sqlalchemy import text
 
 load_dotenv()
 
@@ -36,11 +40,17 @@ def generate_slug(title: str) -> str:
 UPLOAD_DIR = "uploads"
 THUMBNAIL_DIR = "thumbnails"
 
+cloudinary.config(
+    cloud_name="uiaphotography",
+    api_key="927661185146974",
+    api_secret="sMUi6mYgnlbqJXP6c4h8pIKehao",
+)
+
 def save_upload_file(upload_file: UploadFile) -> str:
     if not os.path.exists(UPLOAD_DIR):
         os.makedirs(UPLOAD_DIR)
 
-    ext = os.path.splitext(upload_file.filename)[1]
+    ext = os.path.splitext(upload_file.filename)[1] or ".jpg"
     unique_filename = f"{uuid.uuid4().hex}{ext}"
     file_path = os.path.join(UPLOAD_DIR, unique_filename)
 
@@ -48,45 +58,107 @@ def save_upload_file(upload_file: UploadFile) -> str:
         content = upload_file.file.read()
         out_file.write(content)
 
-    return file_path
+    upload_result = cloudinary.uploader.upload(
+        file_path,
+        folder="uploads",
+        public_id=unique_filename.split(".")[0],
+        resource_type="image",
+        overwrite=True,
+    )
 
-def create_thumbnail(image_file: UploadFile = None, image_url: str = None, size=(150, 150)) -> str:
+    return {
+        "local_path": file_path,
+        "cloudinary_url": upload_result["secure_url"],
+    }
+
+def create_thumbnail(image_path: str = None, image_url: str = None, size=(150, 150)) -> dict:
     if not os.path.exists(THUMBNAIL_DIR):
         os.makedirs(THUMBNAIL_DIR)
 
-    if image_file:
-        img = Image.open(image_file.file)
-        ext = os.path.splitext(str(image_url).split("?")[0])[1] or ".png"
-
+    if image_path:
+        img = Image.open(image_path)
     elif image_url:
+        import requests, io
         response = requests.get(str(image_url))
         img = Image.open(io.BytesIO(response.content))
-        ext = os.path.splitext(str(image_url).split("?")[0])[1] or ".png"
-
     else:
-        raise ValueError("Provide either image_file or image_url")
+        raise ValueError("Provide either image_path or image_url")
 
     img.thumbnail(size)
-    unique_filename = f"{uuid.uuid4().hex}{ext}"
-    file_path = os.path.join(THUMBNAIL_DIR, unique_filename)
+    thumb_filename = f"{uuid.uuid4().hex}.jpg"
+    thumb_path = os.path.join(THUMBNAIL_DIR, thumb_filename)
+    img.save(thumb_path, format="JPEG")
 
-    img.save(file_path)
+    upload_thumb = cloudinary.uploader.upload(
+        thumb_path,
+        folder="thumbnails",
+        public_id=thumb_filename.split(".")[0],
+        resource_type="image",
+        overwrite=True,
+    )
 
-    return file_path
+    return {
+        "local_thumbnail": thumb_path,
+        "cloudinary_thumbnail_url": upload_thumb["secure_url"],
+    }
 
+def handle_image_upload(upload_file: UploadFile) -> dict:
+    """
+    Full process: save image, upload to Cloudinary, create and upload thumbnail.
+    Returns Cloudinary URLs for both.
+    """
+    image_info = save_upload_file(upload_file)
+    thumbnail_info = create_thumbnail(image_info["local_path"])
 
-def send_order_confirmation_email(order: Orders):
-    product_title = (order.items[0].product.title if order.items else "your product")
+    return {
+        "image_url": image_info["cloudinary_url"],
+        "thumbnail_url": thumbnail_info["cloudinary_thumbnail_url"],
+    }
+
+def send_order_confirmation_email(order: Orders, db: Session):
+    download_links = []
+
+    for item in order.items:
+        if getattr(item.product_type, "value", str(item.product_type)).lower() == "digital":
+                product = db.query(Products).filter(Products.id == item.product_id).first()
+                if product and product.image_url:
+                    download_links.append({
+                        "title": product.title,
+                        "url": product.image_url
+                    })
+
+    if len(order.items) == 1:
+        product_title = order.items[0].product.title
+    else:
+        product_title = ", ".join(
+            [item.product.title for item in order.items]
+        )
 
     msg = MIMEMultipart("alternative")
     msg["From"] = SMTP_USERNAME
     msg["To"] = order.customer_email
     msg["Subject"] = f"Order Confirmation for {product_title}"
 
+    if download_links:
+        links_html = "".join(
+            f'<li><a href="{link["url"]}" target="_blank">{link["title"]}</a></li>'
+            for link in download_links
+        )
+        download_section = f"""
+            <p>Kindly find your downloadable file(s) below:</p>
+            <ul>
+                {links_html}
+            </ul>
+        """
+    else:
+        download_section = "<p>No digital downloads associated with this order.</p>"
+
+
     html_content = f"""
         <p>Hi {order.customer_name},</p>
         <p>Thank you for purchasing {product_title}.</p>
         <p>It’s always a pleasure to have you as a customer. Enjoy your photos!</p>
+        {download_section}
         <p>Best regards,<br/>UIAPhotography</p>
     """
     msg.attach(MIMEText(html_content, "html"))
@@ -295,3 +367,45 @@ def calculate_order_shipping_and_tax(order_or_items, country_code, shipping_type
     total_tax = subtotal * tax_rate
 
     return shipping_cost, total_tax
+
+def extract_public_id_from_url(url: str) -> str:
+    try:
+        path = url.split("/upload/")[1]  # get "v1760238039/uploads/..."
+        path = path.split(".")[0]        # remove extension
+        parts = path.split("/")          # ['v1760238039', 'uploads', 'fileid']
+        public_id = "/".join(parts[1:])  # skip version number
+        return public_id
+    except Exception:
+        return None
+    
+def generate_signed_cloudinary_url(original_url: str, expiry_seconds: int = 3600):
+    public_id = extract_public_id_from_url(original_url)
+    if not public_id:
+        return original_url 
+
+    # signed_url, _ = cloudinary.utils.cloudinary_url(
+    #     public_id,
+    #     resource_type="image",
+    #     type="authenticated",
+    #     sign_url=True,
+    #     expires_at=int(time.time()) + expiry_seconds
+    # )
+
+    signed_url, _ = cloudinary.utils.cloudinary_url(
+        public_id,
+        resource_type="image",
+        sign_url=False,
+    )
+    return signed_url
+
+def reset_primary_key_sequence():
+    db = Orders()  # create an active DB session
+    try:
+        db.execute(text('ALTER SEQUENCE "Photos_id_seq" RESTART WITH 1'))
+        db.commit()
+        print("✅ Sequence reset successfully")
+    except Exception as e:
+        db.rollback()
+        print("❌ Error resetting sequence:", e)
+    finally:
+        db.close()

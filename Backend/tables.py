@@ -29,8 +29,6 @@ class Products(Base):
     description = Column(Text)
     image_url = Column(Text, nullable=True)
     thumbnail_url = Column(Text, nullable=True)
-    image_file = Column(Text, nullable=True)
-    thumbnail_file = Column(Text, nullable=True)
     price = Column(Numeric(6, 2), nullable=False)
     is_for_sale = Column(Boolean, default=True)
     dimensions = Column(Enum(DimensionType, name="dimension_enum"), nullable=True)
