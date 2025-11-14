@@ -1,4 +1,4 @@
-# 🛒 UIAPhotography (Backend)
+# 🛒 UIAPhotography (Backend) [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Ojulari123/UIAPhotography)
 
 This is a **full-featured e-commerce backend** built with **FastAPI**, **Neon PostgreSQL (SQLAlchemy ORM)**, **Stripe**, **SMTP**.  
 It supports **product management, orders, checkout, shipping, payments, and email notifications**, making it a solid foundation for any online shop.
