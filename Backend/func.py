@@ -42,8 +42,8 @@ THUMBNAIL_DIR = "thumbnails"
 
 cloudinary.config(
     cloud_name="uiaphotography",
-    api_key="927661185146974",
-    api_secret="sMUi6mYgnlbqJXP6c4h8pIKehao",
+    api_key=os.getenv("CLOUDINARY_API_KEY"),
+    api_secret=os.getenv("CLOUDINARY_API_SECRET"),
 )
 
 def save_upload_file(upload_file: UploadFile) -> str:
