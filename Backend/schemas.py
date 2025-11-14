@@ -133,7 +133,6 @@ class OrderResponse(BaseModel):
     }
 
 class CheckoutInfoResponse(BaseModel):
-    id: int
     order_id: int
     customer_name: str
     email: str
