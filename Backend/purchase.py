@@ -23,6 +23,7 @@ from sqlalchemy import text
 logger = logging.getLogger(__name__)
 
 orders_router = APIRouter()
+portfolio_router = APIRouter()
 payment_router = APIRouter()
 email_router = APIRouter()
 checkout_router = APIRouter()

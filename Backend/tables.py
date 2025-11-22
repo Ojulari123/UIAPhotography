@@ -2,7 +2,7 @@ from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey,
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
-from schemas import ProductType, StatusType, DimensionType
+from schemas import ProductType, StatusType, DimensionType, PortfolioType
 import os
 from dotenv import load_dotenv
 
@@ -119,6 +119,37 @@ class ShippingInfo(Base):
     updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
 
     order = relationship("Orders", back_populates="shipping_info")
+
+class Portfolio(Base):
+    __tablename__ = "Portfolio"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(255), nullable=False, unique=True)
+    slug = Column(String(255), nullable=False, unique=True)
+    category = Column(Enum(PortfolioType, name="portfolio_enum"), nullable=False)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+
+    images = relationship("PortfolioImages", back_populates="portfolio", cascade="all, delete-orphan")
+
+class PortfolioImages(Base):
+    __tablename__ = "Portfolio_images"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    portfolio_id = Column(Integer, ForeignKey("Portfolio.id"), nullable=False, index=True)
+    image_url = Column(Text, nullable=True)
+    thumbnail_url = Column(Text, nullable=True)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+
+    portfolio = relationship("Portfolio", back_populates="images")
+
+class PicOfTheWeek(Base):
+    __tablename__ = "Pic_of_the_week"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(255), nullable=True)
+    poem = Column(Text, nullable=False)
+    image_url = Column(Text, nullable=False)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
 
 Base.metadata.create_all(engine)
 

@@ -15,7 +15,7 @@ import cloudinary.uploader
 import time
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
-from tables import Orders, OrderItem, Shipping, CheckoutInfo, ShippingInfo, Products
+from tables import Orders, OrderItem, Shipping, CheckoutInfo, ShippingInfo, Products, Portfolio, PortfolioImages
 from email.mime.multipart import MIMEMultipart
 from schemas import DimensionType, DIMENSION_DETAILS, ProductType
 from email.mime.text import MIMEText
@@ -39,6 +39,7 @@ def generate_slug(title: str) -> str:
 
 UPLOAD_DIR = "uploads"
 THUMBNAIL_DIR = "thumbnails"
+POEM_DIR = "pics_of_the_week"
 
 cloudinary.config(
     cloud_name="uiaphotography",
@@ -71,7 +72,7 @@ def save_upload_file(upload_file: UploadFile) -> str:
         "cloudinary_url": upload_result["secure_url"],
     }
 
-def create_thumbnail(image_path: str = None, image_url: str = None, size=(150, 150)) -> dict:
+def create_thumbnail(image_path: str = None, image_url: str = None, size=(150, 150), folder: str = "thumbnails") -> dict:
     if not os.path.exists(THUMBNAIL_DIR):
         os.makedirs(THUMBNAIL_DIR)
 
@@ -83,6 +84,9 @@ def create_thumbnail(image_path: str = None, image_url: str = None, size=(150, 1
         img = Image.open(io.BytesIO(response.content))
     else:
         raise ValueError("Provide either image_path or image_url")
+    
+    if img.mode in ("RGBA", "P"):
+        img = img.convert("RGB")
 
     img.thumbnail(size)
     thumb_filename = f"{uuid.uuid4().hex}.jpg"
@@ -91,7 +95,7 @@ def create_thumbnail(image_path: str = None, image_url: str = None, size=(150, 1
 
     upload_thumb = cloudinary.uploader.upload(
         thumb_path,
-        folder="thumbnails",
+        folder=folder,
         public_id=thumb_filename.split(".")[0],
         resource_type="image",
         overwrite=True,
@@ -103,10 +107,6 @@ def create_thumbnail(image_path: str = None, image_url: str = None, size=(150, 1
     }
 
 def handle_image_upload(upload_file: UploadFile) -> dict:
-    """
-    Full process: save image, upload to Cloudinary, create and upload thumbnail.
-    Returns Cloudinary URLs for both.
-    """
     image_info = save_upload_file(upload_file)
     thumbnail_info = create_thumbnail(image_info["local_path"])
 
@@ -114,6 +114,41 @@ def handle_image_upload(upload_file: UploadFile) -> dict:
         "image_url": image_info["cloudinary_url"],
         "thumbnail_url": thumbnail_info["cloudinary_thumbnail_url"],
     }
+
+async def save_pic_of_week(upload_file: UploadFile) -> dict:
+    if not os.path.exists(POEM_DIR):
+        os.makedirs(POEM_DIR)
+    
+    ext = os.path.splitext(upload_file.filename)[1] or ".jpg"
+    unique_filename = f"{uuid.uuid4().hex}{ext}"
+    file_path = os.path.join(POEM_DIR, unique_filename)
+    
+    with open(file_path, "wb") as f:
+        f.write(await upload_file.read())
+    
+    return {"local_path": file_path}
+
+def upload_pic_of_week(image_path: str = None, image_url: str = None) -> str:
+    if image_path:
+        upload_result = cloudinary.uploader.upload(
+            image_path,
+            folder="picOfWeek",
+            resource_type="image",
+            overwrite=True,
+        )
+    elif image_url:
+        response = requests.get(image_url)
+        upload_result = cloudinary.uploader.upload(
+            io.BytesIO(response.content),
+            folder="picOfWeek",
+            resource_type="image",
+            overwrite=True,
+        )
+    else:
+        raise ValueError("Provide either image_path or image_url")
+    
+    return upload_result["secure_url"]
+
 
 def send_order_confirmation_email(order: Orders, db: Session):
     download_links = []
@@ -246,7 +281,6 @@ def calculate_order_weight(order_or_items, db: Session, gsm: float = 300):
         total_weight_g += item_total_weight
 
     return total_weight_g
-
 
 def calculate_checkout_total_for_order(order: Orders, db: Session):
     if not order.items:

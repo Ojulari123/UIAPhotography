@@ -2,13 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException, Form, File, UploadFile, B
 from sqlalchemy.orm import Session
 import cloudinary
 import cloudinary.uploader
-from tables import Products, CheckoutInfo
-from schemas import AddProductsbyUrlInfo, ProductsData, AddProductMetafield, EditProductsData
-from tables import get_db, OrderItem
-from func import generate_slug, save_upload_file, create_thumbnail
+from schemas import AddProductsbyUrlInfo, ProductsData, AddProductMetafield, EditProductsData, PortfolioCreate, PortfolioResponse, PortfolioImageResponse
+from tables import get_db, Products, OrderItem, Portfolio, PortfolioImages, PicOfTheWeek
+from func import generate_slug, save_upload_file, create_thumbnail, save_pic_of_week, upload_pic_of_week
 from typing import Optional, List
 
 products_router = APIRouter()
+portfolio_router = APIRouter()
+poem_router = APIRouter()
 
 @products_router.post("/add-photos-url", response_model=ProductsData)
 async def add_new_photos_via_url(text: AddProductsbyUrlInfo, db: Session = Depends(get_db)):
@@ -207,3 +208,68 @@ async def delete_all_photos(db: Session = Depends(get_db)):
 
     db.commit()
     return {"detail": "All members have been deleted :("}
+
+@portfolio_router.post("/add-portfolio", response_model=PortfolioResponse)
+async def add_new_portfolio(title: str = Form(...), category: str = Form(...), files: List[UploadFile] = File(...), db: Session = Depends(get_db)):
+    if db.query(Portfolio).filter(Portfolio.title == title).first():
+        raise HTTPException(status_code=400, detail="Portfolio with this title already exists.")
+
+    slug = generate_slug(title)
+    if db.query(Portfolio).filter(Portfolio.slug == slug).first():
+        raise HTTPException(status_code=400, detail="Slug already exists. Please change the title.")
+
+    portfolio = Portfolio(title=title, slug=slug, category=category)
+    db.add(portfolio)
+    db.commit()
+    db.refresh(portfolio)
+
+    image_entries = []
+    for file in files:
+        saved_file = save_upload_file(file)
+        upload_result = cloudinary.uploader.upload(
+            saved_file["local_path"],
+            folder=f"portfolio/{category}/{slug}",
+            public_id=file.filename.rsplit('.', 1)[0],
+            resource_type="image",
+            overwrite=True
+        )
+
+        thumbnail_info = create_thumbnail(image_path=saved_file["local_path"], folder = "portfolio_thumbnail")
+
+        portfolio_image = PortfolioImages(
+            portfolio_id=portfolio.id,
+            image_url=upload_result["secure_url"],
+            thumbnail_url=thumbnail_info["cloudinary_thumbnail_url"]
+        )
+        db.add(portfolio_image)
+        image_entries.append(portfolio_image)
+
+    db.commit()
+    for img in image_entries:
+        db.refresh(img)
+
+    portfolio.images = image_entries
+
+    return portfolio
+
+@poem_router.post("/add-poem-of-the-week")
+async def add_pic_of_the_week(upload_file: UploadFile, poem: str = Form(...), db: Session = Depends(get_db)):
+    try:
+        image_info = await save_pic_of_week(upload_file) 
+        cloud_url = upload_pic_of_week(image_path=image_info["local_path"])
+
+        pic_record = PicOfTheWeek(image_url=cloud_url, poem=poem)
+        db.add(pic_record)
+        db.commit()
+        db.refresh(pic_record)
+
+        return {
+            "message": "Pic of the Week added successfully",
+            "Pic_of_week": {
+                "id": pic_record.id,
+                "image_url": pic_record.image_url,
+                "poem": pic_record.poem
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

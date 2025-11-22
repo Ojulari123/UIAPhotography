@@ -26,6 +26,12 @@ class DimensionType(str, enum.Enum):
     A4 = "A4"
     A5 = "A5"
 
+class PortfolioType(str, enum.Enum):
+    DIGITAL = "digital"
+    NATURE = "nature"
+    WILDLIFE = "wildlife"
+    LANDSCAPE = "landscape"
+
 DIMENSION_DETAILS = {
     "A3": "14.8 x 21.0 cm (11.7 x 16.5 in)",
     "A4": "21.0 x 29.7 cm (8.3 x 11.7 in)",
@@ -200,3 +206,25 @@ class PaymentIntentResponse(BaseModel):
 class PaymentVerificationRequest(BaseModel):
     transaction_id: str  
     status: str          
+
+class PortfolioCreate(BaseModel):
+    title: str
+    category: PortfolioType
+
+class PortfolioImageResponse(BaseModel):
+    id: int
+    image_url: str
+    thumbnail_url: str | None = None
+
+    class Config:
+        orm_mode = True
+
+class PortfolioResponse(BaseModel):
+    id: int
+    title: str
+    slug: str
+    category: PortfolioType
+    images: list[PortfolioImageResponse]
+
+    class Config:
+        orm_mode = True

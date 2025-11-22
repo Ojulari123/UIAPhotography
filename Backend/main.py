@@ -5,7 +5,7 @@ from sqlalchemy.orm import sessionmaker, Session
 from fastapi.responses import HTMLResponse
 import asyncio
 from dataclasses import dataclass
-from products import products_router
+from products import products_router, portfolio_router, poem_router
 from purchase import orders_router, payment_router, email_router, checkout_router
 
 app = FastAPI()
@@ -29,6 +29,8 @@ class ConnectionManager:
 connection_manager = ConnectionManager()
 
 app.include_router(products_router, prefix="/products", tags=["Products"])
+app.include_router(portfolio_router, tags=["Portfolio"])
+app.include_router(poem_router, tags=["Pic & Poem"])
 app.include_router(orders_router, tags=["Orders"])
 app.include_router(payment_router, tags=["Payment"])
 app.include_router(email_router, tags=["Email"])
