@@ -252,7 +252,7 @@ async def add_new_portfolio(title: str = Form(...), category: str = Form(...), f
 
     return portfolio
 
-@poem_router.post("/add-poem-of-the-week")
+@poem_router.post("/add-pic-and-poem-of-the-week")
 async def add_pic_of_the_week(upload_file: UploadFile, poem: str = Form(...), db: Session = Depends(get_db)):
     try:
         image_info = await save_pic_of_week(upload_file) 
