@@ -2,10 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, Form, File, UploadFile, B
 from sqlalchemy.orm import Session
 import cloudinary
 import cloudinary.uploader
-from schemas import AddProductsbyUrlInfo, ProductsData, AddProductMetafield, EditProductsData, PortfolioCreate, PortfolioResponse, PortfolioImageResponse
+from schemas import AddProductsbyUrlInfo, ProductsData, AddProductMetafield, EditProductsData, PortfolioCreate, PortfolioResponse, PortfolioImageResponse, PicOfTheWeekResponse
 from tables import get_db, Products, OrderItem, Portfolio, PortfolioImages, PicOfTheWeek
 from func import generate_slug, save_upload_file, create_thumbnail, save_pic_of_week, upload_pic_of_week
 from typing import Optional, List
+from urllib.parse import unquote
 
 products_router = APIRouter()
 portfolio_router = APIRouter()
@@ -193,19 +194,44 @@ async def delete_a_photo(product_id: Optional[int]= None, product_title: Optiona
     linked_order_item = db.query(OrderItem).filter(OrderItem.product_id == delete_photo_query.id).first()
     if linked_order_item:
         raise HTTPException(status_code=400, detail="Cannot delete this photo because it is linked to existing orders.")
+    
+    try:
+        if delete_photo_query.image_url:
+            public_id = delete_photo_query.image_url.split("/")[-1].split(".")[0]
+            cloudinary.uploader.destroy(f"uploads/{public_id}", resource_type="image")
+
+        if hasattr(delete_photo_query, "thumbnail_url") and delete_photo_query.thumbnail_url:
+            thumb_id = delete_photo_query.thumbnail_url.split("/")[-1].split(".")[0]
+            cloudinary.uploader.destroy(f"thumbnails/{thumb_id}", resource_type="image")
+
+    except Exception as e:
+        print("Cloudinary delete error:", e)
+
     db.delete(delete_photo_query)
     db.commit()
-    return {"detail": f"Artwork ID {product_id} has been deleted from the table"}
+    return {"detail": f"Artwork {delete_photo_query.title} has been deleted from the table"}
 
 @products_router.delete("/delete-all-photos")
 async def delete_all_photos(db: Session = Depends(get_db)):
     all_photos = db.query(Products).all()
+
     for photos in all_photos:
         linked_order_item = db.query(OrderItem).filter(OrderItem.product_id == photos.id).first()
         if linked_order_item:
             raise HTTPException(status_code=400, detail="Cannot delete this photo because it is linked to existing orders.")
-        db.delete(photos) 
+        try:
+            if photos.image_url:
+                public_id = photos.image_url.split("/")[-1].split(".")[0]
+                cloudinary.uploader.destroy(f"uploads/{public_id}", resource_type="image")
 
+            if hasattr(photos, "thumbnail_url") and photos.thumbnail_url:
+                thumb_id = photos.thumbnail_url.split("/")[-1].split(".")[0]
+                cloudinary.uploader.destroy(f"thumbnails/{thumb_id}", resource_type="image")
+
+        except Exception as e:
+            print("Cloudinary delete error:", e)
+
+        db.delete(photos) 
     db.commit()
     return {"detail": "All members have been deleted :("}
 
@@ -249,8 +275,75 @@ async def add_new_portfolio(title: str = Form(...), category: str = Form(...), f
         db.refresh(img)
 
     portfolio.images = image_entries
-
     return portfolio
+
+@portfolio_router.get("/view-all-portfolios", response_model=List[PortfolioResponse])
+async def get_all_portfolios(db: Session = Depends(get_db)):
+    portfolios = db.query(Portfolio).all()
+    for portfolio in portfolios:
+        portfolio.images = db.query(PortfolioImages).filter(PortfolioImages.portfolio_id == portfolio.id).all()
+    return portfolios
+
+@portfolio_router.get("/view-a-portfolio/{portfolio_id}", response_model=PortfolioResponse)
+async def get_portfolio(portfolio_id: int, db: Session = Depends(get_db)):
+    portfolio = db.query(Portfolio).filter(Portfolio.id == portfolio_id).first()
+    if not portfolio:
+        raise HTTPException(status_code=404, detail="Portfolio not found")
+    portfolio.images = db.query(PortfolioImages).filter(PortfolioImages.portfolio_id == portfolio.id).all()
+    return portfolio
+
+@portfolio_router.delete("/delete-portfolio/{portfolio_id}")
+async def delete_portfolio(portfolio_id: int, db: Session = Depends(get_db)):
+    portfolio = db.query(Portfolio).filter(Portfolio.id == portfolio_id).first()
+    if not portfolio:
+        raise HTTPException(status_code=404, detail="Portfolio not found")
+    
+    for img in portfolio.images:
+        try:
+            if img.image_url:
+                path = img.image_url.split("/upload/")[-1]
+                public_id_with_ext = path.split("/", 1)[1] 
+                public_id_with_ext = unquote(public_id_with_ext)  
+                public_id = public_id_with_ext.rsplit(".", 1)[0] 
+                cloudinary.uploader.destroy(public_id, resource_type="image")
+
+            if img.thumbnail_url:
+                thumb_id = img.thumbnail_url.split("/")[-1].split(".")[0]
+                cloudinary.uploader.destroy(f"portfolio_thumbnail/{thumb_id}", resource_type="image")
+
+        except Exception as e:
+            print("Cloudinary deletion error:", e)
+
+    db.query(PortfolioImages).filter(PortfolioImages.portfolio_id == portfolio.id).delete()
+    db.delete(portfolio)
+    db.commit()
+
+    return {"message": "Portfolio deleted successfully"}
+
+@portfolio_router.delete("/delete-all-portfolios")
+async def delete_all_portfolios(db: Session = Depends(get_db)):
+    portfolios = db.query(Portfolio).all()
+
+    for portfolio in portfolios:
+        for img in portfolio.images:
+            try:
+                if img.image_url:
+                    path = img.image_url.split("/upload/")[-1]
+                    public_id_with_ext = path.split("/", 1)[1] 
+                    public_id_with_ext = unquote(public_id_with_ext)  
+                    public_id = public_id_with_ext.rsplit(".", 1)[0] 
+                    cloudinary.uploader.destroy(public_id, resource_type="image")
+
+                if img.thumbnail_url:
+                    thumb_id = img.thumbnail_url.split("/")[-1].split(".")[0]
+                    cloudinary.uploader.destroy(f"portfolio_thumbnail/{thumb_id}", resource_type="image")
+            except Exception as e:
+                print("Cloudinary deletion error:", e)
+
+        db.query(PortfolioImages).filter(PortfolioImages.portfolio_id == portfolio.id).delete(synchronize_session=False)
+        db.delete(portfolio)
+    db.commit()
+    return {"message": "All portfolios deleted successfully"}
 
 @poem_router.post("/add-pic-and-poem-of-the-week")
 async def add_pic_of_the_week(upload_file: UploadFile, poem: str = Form(...), db: Session = Depends(get_db)):
@@ -273,3 +366,52 @@ async def add_pic_of_the_week(upload_file: UploadFile, poem: str = Form(...), db
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+@poem_router.get("/pic-of-the-week", response_model=List[PicOfTheWeekResponse])
+async def get_all_pics_of_the_week(db: Session = Depends(get_db)):
+    pics = db.query(PicOfTheWeek).all()
+    return [
+        {"id": pic.id, "image_url": pic.image_url, "poem": pic.poem}
+        for pic in pics
+    ]
+
+@poem_router.get("/pic-of-the-week/{pic_id}", response_model=PicOfTheWeekResponse)
+async def get_pic_of_the_week(pic_id: int, db: Session = Depends(get_db)):
+    pic = db.query(PicOfTheWeek).filter(PicOfTheWeek.id == pic_id).first()
+    if not pic:
+        raise HTTPException(status_code=404, detail="Pic of the Week not found")
+    return {"id": pic.id, "image_url": pic.image_url, "poem": pic.poem}
+    
+@poem_router.delete("/delete-pic-of-the-week/{pic_id}")
+async def delete_pic_of_the_week(pic_id: int, db: Session = Depends(get_db)):
+    pic_record = db.query(PicOfTheWeek).filter(PicOfTheWeek.id == pic_id).first()
+    if not pic_record:
+        raise HTTPException(status_code=404, detail="Pic of the Week not found")
+
+    try:
+        public_id = pic_record.image_url.split("/")[-1].split(".")[0]
+        cloudinary.uploader.destroy(f"PicOfWeek/{public_id}", resource_type="image")
+    except Exception:
+        pass 
+
+    db.delete(pic_record)
+    db.commit()
+    return {"message": "Pic of the Week deleted successfully"}
+
+@poem_router.delete("/delete-all-pic-of-the-week")
+async def delete_all_pic_of_the_week(db: Session = Depends(get_db)):
+    pics = db.query(PicOfTheWeek).all()
+
+    for pic in pics:
+        try:
+            if pic.image_url:
+                public_id = pic.image_url.split("/")[-1].split(".")[0]
+                cloudinary.uploader.destroy(f"PicOfWeek/{public_id}", resource_type="image")
+        except Exception as e:
+            print("Cloudinary deletion error:", e)
+
+        db.delete(pic)
+    db.commit()
+    return {"message": "All Pic of the Week entries deleted successfully"}
+
+

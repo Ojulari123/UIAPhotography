@@ -228,3 +228,11 @@ class PortfolioResponse(BaseModel):
 
     class Config:
         orm_mode = True
+
+class PicOfTheWeekResponse(BaseModel):
+    id: int
+    image_url: str
+    poem: str
+
+    class Config:
+        orm_mode = True

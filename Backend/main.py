@@ -1,4 +1,5 @@
 from fastapi import FastAPI, WebSocket, Request, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
@@ -8,7 +9,7 @@ from dataclasses import dataclass
 from products import products_router, portfolio_router, poem_router
 from purchase import orders_router, payment_router, email_router, checkout_router
 
-app = FastAPI()
+app = FastAPI(title="UIAPhotography API")
 
 @dataclass
 class ConnectionManager:
@@ -27,6 +28,14 @@ class ConnectionManager:
         self.active_connections.remove(websocket)
 
 connection_manager = ConnectionManager()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],          # replace when frontend is ready
+    allow_credentials=True,        
+    allow_methods=["*"],          
+    allow_headers=["*"],           
+)
 
 app.include_router(products_router, prefix="/products", tags=["Products"])
 app.include_router(portfolio_router, tags=["Portfolio"])
