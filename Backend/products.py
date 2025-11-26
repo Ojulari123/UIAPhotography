@@ -346,12 +346,12 @@ async def delete_all_portfolios(db: Session = Depends(get_db)):
     return {"message": "All portfolios deleted successfully"}
 
 @poem_router.post("/add-pic-and-poem-of-the-week")
-async def add_pic_of_the_week(upload_file: UploadFile, poem: str = Form(...), db: Session = Depends(get_db)):
+async def add_pic_of_the_week(upload_file: UploadFile, title: str = Form(...), poem: str = Form(...), db: Session = Depends(get_db)):
     try:
         image_info = await save_pic_of_week(upload_file) 
         cloud_url = upload_pic_of_week(image_path=image_info["local_path"])
 
-        pic_record = PicOfTheWeek(image_url=cloud_url, poem=poem)
+        pic_record = PicOfTheWeek(title=title, image_url=cloud_url, poem=poem)
         db.add(pic_record)
         db.commit()
         db.refresh(pic_record)
@@ -360,6 +360,7 @@ async def add_pic_of_the_week(upload_file: UploadFile, poem: str = Form(...), db
             "message": "Pic of the Week added successfully",
             "Pic_of_week": {
                 "id": pic_record.id,
+                "title": pic_record.title,
                 "image_url": pic_record.image_url,
                 "poem": pic_record.poem
             }
