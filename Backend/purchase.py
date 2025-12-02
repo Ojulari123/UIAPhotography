@@ -340,6 +340,23 @@ async def create_payment_intent(data: PaymentIntentRequest, db: Session = Depend
     db.commit()
     db.refresh(checkout_info)
 
+    if has_physical:
+        shipping_record = Shipping(
+            order_id=checkout_info.order.id,
+            address_line1=data.shipping.address_line1,
+            address_line2=data.shipping.address_line2 or "",
+            city=data.shipping.city,
+            state=data.shipping.state,
+            postal_code=data.shipping.postal_code,
+            country_code=data.shipping.country_code,
+            shipping_fee=float(shipping_fee),
+            tax=float(tax)
+        )
+
+        db.add(shipping_record)
+        db.commit()
+        db.refresh(shipping_record)
+
     return PaymentIntentResponse(
         client_secret=intent.client_secret,
         amount=order_total,
@@ -399,25 +416,6 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 db.flush()
             else:
                 new_order = db.query(Orders).filter(Orders.id == checkout_info.order_id).first()
-
-            has_physical = any(getattr(item.product_type, "value", str(item.product_type)).lower() == "physical" for item in new_order.items)
-            if has_physical:
-                shipping_info = intent.get("shipping")
-                if shipping_info:
-                    address = shipping_info.get("address", {})
-                    shipping_record = Shipping(
-                        order_id=new_order.id,
-                        address_line1=address.get("line1", ""),
-                        address_line2=address.get("line2", ""),
-                        city=address.get("city", ""),
-                        state=address.get("state", ""),
-                        postal_code=address.get("postal_code", ""),
-                        country_code=address.get("country", ""),
-                        shipping_fee=checkout_info.shipping_fee,
-                        tax=checkout_info.tax_amount
-                    )
-                    db.add(shipping_record)
-                    db.flush()
 
             send_order_confirmation_email(new_order,db)
 
