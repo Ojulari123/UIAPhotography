@@ -7,7 +7,7 @@ from fastapi.responses import HTMLResponse
 import asyncio
 from dataclasses import dataclass
 from products import products_router, portfolio_router, poem_router
-from purchase import orders_router, payment_router, email_router, checkout_router
+from purchase import orders_router, payment_router, email_router, checkout_router, shipping_router
 
 app = FastAPI(title="UIAPhotography API")
 
@@ -44,4 +44,4 @@ app.include_router(orders_router, tags=["Orders"])
 app.include_router(payment_router, tags=["Payment"])
 app.include_router(email_router, tags=["Email"])
 app.include_router(checkout_router, tags=["Checkout"])
-    
+app.include_router(shipping_router, tags=["Shipping"])

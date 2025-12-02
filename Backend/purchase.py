@@ -27,6 +27,7 @@ portfolio_router = APIRouter()
 payment_router = APIRouter()
 email_router = APIRouter()
 checkout_router = APIRouter()
+shipping_router = APIRouter()
 
 load_dotenv()
 
@@ -154,50 +155,6 @@ async def create_order( order_data: CreateOrder, shipping_type: str = "standard"
 # async def reset_primary_key_sequence():
 #     reset_primary_key_sequence()
 #     return{"detail":"noicee"}
-
-@orders_router.post("/input-shipping-info/{order_id}", response_model=ShippingInfoResponse)
-async def input_shipping_info(order_id: int, text: CreateShippingInfo, db: Session = Depends(get_db)):
-    order = db.query(Orders).filter(Orders.id == order_id).first()
-    if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
-    
-    shipping_info = ShippingInfo(
-        order_id=order.id,
-        carrier=text.carrier,
-        tracking_number=text.tracking_number,
-        tracking_url=text.tracking_url
-    )
-    db.add(shipping_info)
-    db.commit()
-    db.refresh(shipping_info)
-
-    return shipping_info
-
-@orders_router.get("/view-orders",response_model=List[OrderResponse])
-async def view_orders_table(db: Session = Depends(get_db)):
-    orders = db.query(Orders).all()
-    order_responses = []
-    for order in orders:
-        items = [
-            OrderItemResponse(
-                product_id=item.product_id,
-                name=item.product.title, 
-                price=float(item.price_at_purchase),  
-                quantity=item.quantity,
-                product_type=item.product_type
-            )
-            for item in order.items
-        ]
-
-        order_responses.append(OrderResponse(
-            id=order.id,
-            customer_name=order.customer_name,
-            status=order.status,
-            items=items,
-            order_total=float(order.order_total)            
-        ))
-
-    return order_responses
 
 @email_router.post("/send-order-confirmation/{order_id}")
 async def order_confirmation_via_email(order_id:int, db: Session = Depends(get_db)):
@@ -464,7 +421,7 @@ async def delete_an_order(order_id: Optional[int]= None, customer_name: Optional
     if order_id:
         delete_order_query = db.query(Orders).filter(Orders.id == order_id).first()
     elif customer_name:
-        delete_order_query = db.query(Orders).filter(Orders.title == customer_name).first()
+        delete_order_query = db.query(Orders).filter(Orders.customer_name == customer_name).first()
     else:
         raise HTTPException(status_code=404, detail="Provide either Product ID or Title")
     
@@ -498,3 +455,85 @@ async def weight(order_id: int, db: Session = Depends(get_db)):
     db.commit()
 
     return {"order_id": order.id, "total_weight_g": total_weight_g}
+
+@shipping_router.post("/input-shipping-info/{order_id}", response_model=ShippingInfoResponse)
+async def input_shipping_info(order_id: int, text: CreateShippingInfo, db: Session = Depends(get_db)):
+    order = db.query(Orders).filter(Orders.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    shipping_info = ShippingInfo(
+        order_id=order.id,
+        carrier=text.carrier,
+        tracking_number=text.tracking_number,
+        tracking_url=text.tracking_url
+    )
+    db.add(shipping_info)
+    db.commit()
+    db.refresh(shipping_info)
+
+    return shipping_info
+
+@orders_router.get("/view-orders",response_model=List[OrderResponse])
+async def view_orders_table(db: Session = Depends(get_db)):
+    orders = db.query(Orders).all()
+    order_responses = []
+    for order in orders:
+        items = [
+            OrderItemResponse(
+                product_id=item.product_id,
+                name=item.product.title, 
+                price=float(item.price_at_purchase),  
+                quantity=item.quantity,
+                product_type=item.product_type
+            )
+            for item in order.items
+        ]
+
+        order_responses.append(OrderResponse(
+            id=order.id,
+            customer_name=order.customer_name,
+            status=order.status,
+            items=items,
+            order_total=float(order.order_total)            
+        ))
+
+    return order_responses
+
+@shipping_router.get("/view-a-shipping-record/{order}")
+async def view_shipping_table(order_id: Optional[int] = None, shipping_id: Optional[int] = None, db: Session = Depends(get_db)):
+    if order_id:
+        shipping = db.query(Shipping).filter(Shipping.order_id == order_id).all()
+    elif shipping_id:
+        shipping = db.query(Shipping).filter(Shipping.id == shipping_id).all()
+    else:
+        raise HTTPException(status_code=404, detail="Provide either Shipping ID or Order ID")
+
+    if not shipping:
+        raise HTTPException(status_code=404, detail="No shipping record found for this order")
+    
+    return shipping
+    
+@shipping_router.get("/view-shipping-table")
+async def view_shipping_table(db: Session = Depends(get_db)):
+    shipping = db.query(Shipping).all()
+    if not shipping:
+        raise HTTPException(status_code=404, detail="Shipping table cant be found")
+    
+    return shipping
+
+@shipping_router.get("/view-shipping-info-table/{order}")
+async def view_shipping_info_table(order_id:int, db: Session = Depends(get_db)):
+    shipping_info = db.query(ShippingInfo).filter(ShippingInfo.order_id == order_id).first()
+    if not shipping_info:
+        raise HTTPException(status_code=404, detail="No shipping info found for this order")
+    
+    return shipping_info
+
+@shipping_router.get("/view-shipping-info-table")
+async def view_shipping_table(db: Session = Depends(get_db)):
+    shipping_info = db.query(ShippingInfo).all()
+    if not shipping_info:
+        raise HTTPException(status_code=404, detail="Shipping Info table can't be found")
+    
+    return shipping_info
