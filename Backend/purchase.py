@@ -36,16 +36,6 @@ async def create_order( order_data: CreateOrder, shipping_type: str = "standard"
     if not order_data.items:
         raise HTTPException(status_code=400, detail="No items provided for order")
 
-    new_order = Orders(
-        customer_name=order_data.customer_name,
-        customer_email=order_data.customer_email,
-        status=StatusType.ordered.value,
-        created_at=datetime.utcnow()
-    )
-    db.add(new_order)
-    db.commit()
-    db.refresh(new_order)
-
     merged_items = {}
     for item in order_data.items:
         product = db.query(Products).filter(Products.id == item.product_id).first()
