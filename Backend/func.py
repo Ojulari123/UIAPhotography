@@ -361,7 +361,36 @@ ROYAL_MAIL_PRICES = {
     },
 }
 
-def get_shipping_price(country_code: str, weight_g: float, shipping_type="standard") -> Decimal:
+COUNTRY_NAME_TO_CODE = {
+    "united kingdom": "UK",
+    "canada": "CA",
+    "united states": "US",
+    "usa": "US",
+    "france": "FR",
+    "nigeria": "NG",
+    "australia": "AU",
+    "ireland": "IE",
+    "brazil": "BR",
+    "denmark": "DK",
+    "japan": "JP",
+    "netherlands": "NL",
+    "germany": "DE",
+    "italy": "IT",
+    "spain": "ES",
+    "south africa": "ZA",
+}
+
+def normalize_country(country_input: str) -> str:
+    country_input = country_input.strip().lower()
+
+    if country_input in COUNTRY_NAME_TO_CODE:
+        return COUNTRY_NAME_TO_CODE[country_input]
+
+    return country_input.upper()
+
+def get_shipping_price(country_input: str, weight_g: float, shipping_type="standard") -> Decimal:
+    country_code = normalize_country(country_input)
+
     # Pick weight tier
     if weight_g <= 100:
         tier = "<=100"
@@ -370,7 +399,6 @@ def get_shipping_price(country_code: str, weight_g: float, shipping_type="standa
     else:
         tier = "100-250" 
 
-    country_code = country_code.upper()
     country_prices = ROYAL_MAIL_PRICES[tier].get(country_code, ROYAL_MAIL_PRICES[tier]["OTHER"])
     
     if shipping_type not in country_prices:
@@ -378,26 +406,38 @@ def get_shipping_price(country_code: str, weight_g: float, shipping_type="standa
 
     return country_prices[shipping_type]
 
-def calculate_order_shipping_and_tax(order_or_items, country_code, shipping_type="standard"):
+def calculate_order_shipping_and_tax(order_or_items, country_input, shipping_type="standard"):
    
     if hasattr(order_or_items, "items"):
             items_to_process = order_or_items.items
     else:
         items_to_process = order_or_items
 
+    country_code = normalize_country(country_input)
     total_weight_g = calculate_order_weight(items_to_process, db=None)
     shipping_cost = get_shipping_price(country_code, total_weight_g, shipping_type)
 
     supported_countries = {
         "US": Decimal("0.15"), "CA": Decimal("0.15"), "UK": Decimal("0.15"),
         "FR": Decimal("0.15"), "DK": Decimal("0.15"), "AU": Decimal("0.15"),
-        "JP": Decimal("0.15"), "IR": Decimal("0.15"), "BR": Decimal("0.15"),
+        "JP": Decimal("0.15"), "IE": Decimal("0.15"), "BR": Decimal("0.15"),
         "NG": Decimal("0.15"), "IT": Decimal("0.15"), "DE": Decimal("0.15"),
         "ES": Decimal("0.15"),
     }
-    tax_rate = supported_countries.get(country_code.upper(), Decimal("0.15"))
+    tax_rate = supported_countries.get(country_code, Decimal("0.15"))
 
-    subtotal = sum([Decimal(getattr(item, "price_at_purchase", item.price)) * item.quantity for item in items_to_process])
+    subtotal = Decimal("0")
+    for item in items_to_process:
+        if isinstance(item, dict):
+            price = Decimal(str(item.get("price_at_purchase") or item.get("price")))
+            quantity = item.get("quantity")
+        else:
+            # Normal object
+            price = Decimal(getattr(item, "price_at_purchase", item.price))
+            quantity = item.quantity
+
+        subtotal += price * quantity
+
     total_tax = subtotal * tax_rate
 
     return shipping_cost, total_tax

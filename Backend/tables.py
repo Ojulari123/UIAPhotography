@@ -94,7 +94,7 @@ class Shipping(Base):
 
     id = Column(Integer, primary_key=True)
     order_id = Column(Integer, ForeignKey("Orders.id", ondelete="CASCADE"), nullable=False)
-    country_code = Column(String(10), nullable=False)
+    country_code = Column(String(50), nullable=False)
     address_line1 = Column(String(255), nullable=False)
     address_line2 = Column(String(255), nullable=True)
     city = Column(String(100), nullable=False)

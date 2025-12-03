@@ -55,7 +55,7 @@ async def create_order( order_data: CreateOrder, shipping_type: str = "standard"
             }
 
     subtotal = sum(item["price"] * item["quantity"] for item in merged_items.values())
-    has_physical = any(item["product_type"] == ProductType.physical for item in merged_items.values())
+    has_physical = any(item["product_type"] == ProductType.physical.value for item in merged_items.values())
 
     shipping_fee = Decimal("0.0")
     tax_amount = Decimal("0.0")
