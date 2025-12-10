@@ -115,6 +115,7 @@ class CartItem(BaseModel):
 class CreateOrder(BaseModel):
     customer_name: str
     customer_email: EmailStr
+    phone_number: str
     items: List[CartItem]
 
 class OrderItemResponse(BaseModel):
@@ -130,6 +131,8 @@ class OrderItemResponse(BaseModel):
 class OrderResponse(BaseModel):
     id: int
     customer_name: str
+    customer_email: str
+    phone_number: str
     status: StatusType
     items: List[OrderItemResponse]
     order_total: float
