@@ -129,6 +129,7 @@ async def create_order( order_data: CreateOrder, shipping_type: str = "standard"
         id=new_order.id,
         customer_name=new_order.customer_name,
         customer_email=new_order.customer_email,
+        phone_number=new_order.phone_number,
         status=new_order.status,
         created_at=new_order.created_at,
         items=[
@@ -487,6 +488,8 @@ async def view_orders_table(db: Session = Depends(get_db)):
         order_responses.append(OrderResponse(
             id=order.id,
             customer_name=order.customer_name,
+            customer_email=order.customer_email,
+            phone_number=order.phone_number,
             status=order.status,
             items=items,
             order_total=float(order.order_total)            

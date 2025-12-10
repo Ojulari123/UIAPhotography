@@ -132,7 +132,7 @@ class OrderResponse(BaseModel):
     id: int
     customer_name: str
     customer_email: str
-    phone_number: str
+    phone_number: str | None = None
     status: StatusType
     items: List[OrderItemResponse]
     order_total: float
@@ -145,6 +145,7 @@ class CheckoutInfoResponse(BaseModel):
     order_id: int
     customer_name: str
     email: str
+    phone_number: str
     amount_to_be_paid: float
     amount_paid: float
     currency: str
