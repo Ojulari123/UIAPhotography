@@ -21,6 +21,7 @@ from schemas import DimensionType, DIMENSION_DETAILS, ProductType
 from email.mime.text import MIMEText
 from dotenv import load_dotenv
 from sqlalchemy import text
+from passlib.context import CryptContext
 
 load_dotenv()
 
@@ -30,6 +31,16 @@ SMTP_USERNAME = os.getenv("SMTP_USERNAME")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
 
 logger = logging.getLogger(__name__)
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def hash_password(password):
+    return pwd_context.hash(password)
+
+def verify_password(plain, hashed):
+    return pwd_context.verify(plain, hashed)
+
+
 
 def generate_slug(title: str) -> str:
     slug = title.lower()

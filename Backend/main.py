@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker, Session
 from fastapi.responses import HTMLResponse
 import asyncio
 from dataclasses import dataclass
-from products import products_router, portfolio_router, poem_router
+from products import products_router, portfolio_router, poem_router, admin_router
 from purchase import orders_router, payment_router, email_router, checkout_router, shipping_router
 
 app = FastAPI(title="UIAPhotography API")
@@ -37,6 +37,7 @@ app.add_middleware(
     allow_headers=["*"],           
 )
 
+app.include_router(admin_router, tags=["Admin"])
 app.include_router(products_router, prefix="/products", tags=["Products"])
 app.include_router(portfolio_router, tags=["Portfolio"])
 app.include_router(poem_router, tags=["Pic & Poem"])

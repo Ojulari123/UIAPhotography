@@ -2,15 +2,16 @@ from fastapi import APIRouter, Depends, HTTPException, Form, File, UploadFile, B
 from sqlalchemy.orm import Session
 import cloudinary
 import cloudinary.uploader
-from schemas import AddProductsbyUrlInfo, ProductsData, AddProductMetafield, EditProductsData, PortfolioCreate, PortfolioResponse, PortfolioImageResponse, PicOfTheWeekResponse
-from tables import get_db, Products, OrderItem, Portfolio, PortfolioImages, PicOfTheWeek
-from func import generate_slug, save_upload_file, create_thumbnail, save_pic_of_week, upload_pic_of_week
+from schemas import AddProductsbyUrlInfo, ProductsData, AddProductMetafield, EditProductsData, PortfolioCreate, PortfolioResponse, PortfolioImageResponse, PicOfTheWeekResponse, AdminCreate
+from tables import get_db, Admin, Products, OrderItem, Portfolio, PortfolioImages, PicOfTheWeek
+from func import generate_slug, save_upload_file, create_thumbnail, save_pic_of_week, upload_pic_of_week, hash_password
 from typing import Optional, List
 from urllib.parse import unquote
 
 products_router = APIRouter()
 portfolio_router = APIRouter()
 poem_router = APIRouter()
+admin_router = APIRouter()
 
 @products_router.post("/add-photos-url", response_model=ProductsData)
 async def add_new_photos_via_url(text: AddProductsbyUrlInfo, db: Session = Depends(get_db)):
@@ -415,4 +416,25 @@ async def delete_all_pic_of_the_week(db: Session = Depends(get_db)):
     db.commit()
     return {"message": "All Pic of the Week entries deleted successfully"}
 
+@admin_router.post("/create-admin")
+def create_admin(admin: AdminCreate, db: Session = Depends(get_db)):
+    existing = db.query(Admin).filter(Admin.username == admin.username).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Username already exists")
+
+    hashed_pw = hash_password(admin.password)
+
+    new_admin = Admin(
+        username=admin.username,
+        password=hashed_pw
+    )
+
+    db.add(new_admin)
+    db.commit()
+    db.refresh(new_admin)
+
+    return {
+        "message": "Admin created successfully",
+        "admin_id": new_admin.id
+    }
 

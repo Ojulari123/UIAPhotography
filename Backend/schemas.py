@@ -240,3 +240,7 @@ class PicOfTheWeekResponse(BaseModel):
 
     class Config:
         orm_mode = True
+
+class AdminCreate(BaseModel):
+    username: str
+    password: str

@@ -153,6 +153,14 @@ class PicOfTheWeek(Base):
     image_url = Column(Text, nullable=False)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
 
+class Admin(Base):
+    __tablename__ = "Admin"
+
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(255), nullable=False)
+    password = Column(String(255), nullable=False)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+
 Base.metadata.create_all(engine)
 
 def get_db():
