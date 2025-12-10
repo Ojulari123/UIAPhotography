@@ -44,7 +44,7 @@ class CheckoutInfo(Base):
     __tablename__ = "Checkout_Info"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    order_id = Column(Integer, ForeignKey("Orders.id"), nullable=False, unique=True)  
+    order_id = Column(Integer, ForeignKey("Orders.id", ondelete="CASCADE"), nullable=False, unique=True)  
     customer_name = Column(String(255), nullable=False)                     
     email = Column(String(255), nullable=False)
     phone_number = Column(Integer)  
@@ -73,8 +73,8 @@ class Orders(Base):
     
     items = relationship("OrderItem", back_populates="order", cascade="all, delete", passive_deletes=True)
     shipping = relationship("Shipping", uselist=False, back_populates="order", cascade="all, delete", passive_deletes=True)
-    checkout_info = relationship("CheckoutInfo", uselist=False, back_populates="order")
-    shipping_info = relationship("ShippingInfo", back_populates="order", uselist=False)
+    checkout_info = relationship("CheckoutInfo", uselist=False, back_populates="order", cascade="all, delete", passive_deletes=True)
+    shipping_info = relationship("ShippingInfo", uselist=False, back_populates="order", cascade="all, delete", passive_deletes=True)
 
 class OrderItem(Base):
     __tablename__ = "OrderItems"
@@ -113,7 +113,7 @@ class ShippingInfo(Base):
     __tablename__ = "Shipping_info"
 
     id = Column(Integer, primary_key=True, index=True)
-    order_id = Column(Integer, ForeignKey("Orders.id"), nullable=False)
+    order_id = Column(Integer, ForeignKey("Orders.id", ondelete="CASCADE"), nullable=False)
     carrier = Column(String, nullable=False)
     tracking_number = Column(String, nullable=False)
     tracking_url = Column(String, nullable=True)

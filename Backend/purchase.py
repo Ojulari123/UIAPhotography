@@ -421,7 +421,7 @@ async def delete_an_order(order_id: Optional[int]= None, customer_name: Optional
         raise HTTPException(status_code=404, detail="Provide either Product ID or Title")
     
     if not delete_order_query:
-        raise HTTPException(status_code=404, detail="This artwork cannot be found in the Products table")
+        raise HTTPException(status_code=404, detail="This order cannot be found in the Order table")
     
     db.delete(delete_order_query)
     db.commit()
