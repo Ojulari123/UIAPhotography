@@ -457,13 +457,21 @@ async def input_shipping_info(order_id: int, text: CreateShippingInfo, db: Sessi
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
     
-    shipping_info = ShippingInfo(
-        order_id=order.id,
-        carrier=text.carrier,
-        tracking_number=text.tracking_number,
-        tracking_url=text.tracking_url
-    )
-    db.add(shipping_info)
+    shipping_info = db.query(ShippingInfo).filter(ShippingInfo.order_id == order_id).first()
+
+    if shipping_info:
+        shipping_info.carrier = text.carrier
+        shipping_info.tracking_number = text.tracking_number
+        shipping_info.tracking_url = text.tracking_url
+
+    else:
+        shipping_info = ShippingInfo(
+            order_id=order.id,
+            carrier=text.carrier,
+            tracking_number=text.tracking_number,
+            tracking_url=text.tracking_url
+        )
+        db.add(shipping_info)
     
     order.status = text.order_status
     db.commit()
