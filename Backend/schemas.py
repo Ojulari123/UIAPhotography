@@ -168,9 +168,9 @@ class CheckoutInfo(BaseModel):
     transaction_id: str
 
 class CreateShippingInfo(BaseModel):
-    carrier: str
-    tracking_number: str
-    tracking_url: str
+    carrier: str | None = None
+    tracking_number: str | None = None
+    tracking_url: str | None = None
     order_status: StatusType
 
 class ShippingInfoResponse(BaseModel):
