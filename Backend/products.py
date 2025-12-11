@@ -4,7 +4,7 @@ import cloudinary
 import cloudinary.uploader
 from schemas import AddProductsbyUrlInfo, ProductsData, AddProductMetafield, EditProductsData, PortfolioCreate, PortfolioResponse, PortfolioImageResponse, PicOfTheWeekResponse, AdminCreate
 from tables import get_db, Admin, Products, OrderItem, Portfolio, PortfolioImages, PicOfTheWeek
-from func import generate_slug, save_upload_file, create_thumbnail, save_pic_of_week, upload_pic_of_week, hash_password
+from func import generate_slug, save_upload_file, create_thumbnail, save_pic_of_week, upload_pic_of_week, hash_password, verify_password
 from typing import Optional, List
 from urllib.parse import unquote
 
@@ -437,4 +437,25 @@ def create_admin(admin: AdminCreate, db: Session = Depends(get_db)):
         "message": "Admin created successfully",
         "admin_id": new_admin.id
     }
+
+@admin_router.post("/admin-login")
+def admin_login(admin:AdminCreate, db: Session = Depends(get_db)):
+    if not admin.username:
+        raise HTTPException(status_code=400, detail="Kindly provide a username")
+    if not admin.password:
+        raise HTTPException(status_code=400, detail="Kindly provide a password")
+    
+    admin_login = db.query(Admin).filter(Admin.username == admin.username).first()
+    if not admin_login:
+        raise HTTPException(status_code=400, detail="Incorrect username")
+    
+    if not verify_password(admin.password, admin_login.password):
+        raise HTTPException(status_code=400, detail="Invalid password")
+
+    return {
+        "message": "Login successful",
+        "admin_id": admin_login.id,
+        "username": admin_login.username
+    }
+
 
