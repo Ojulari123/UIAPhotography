@@ -464,6 +464,8 @@ async def input_shipping_info(order_id: int, text: CreateShippingInfo, db: Sessi
         tracking_url=text.tracking_url
     )
     db.add(shipping_info)
+    
+    order.status = text.order_status
     db.commit()
     db.refresh(shipping_info)
 

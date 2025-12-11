@@ -171,6 +171,7 @@ class CreateShippingInfo(BaseModel):
     carrier: str
     tracking_number: str
     tracking_url: str
+    order_status: StatusType
 
 class ShippingInfoResponse(BaseModel):
     id: int
