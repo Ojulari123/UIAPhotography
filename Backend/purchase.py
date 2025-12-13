@@ -144,10 +144,6 @@ async def create_order( order_data: CreateOrder, shipping_type: str = "standard"
         ],
         order_total=float(order_total) 
     )
-# @orders_router.post("/reset-number")
-# async def reset_primary_key_sequence():
-#     reset_primary_key_sequence()
-#     return{"detail":"noicee"}
 
 @email_router.post("/send-order-confirmation/{order_id}")
 async def order_confirmation_via_email(order_id:int, db: Session = Depends(get_db)):
@@ -204,6 +200,186 @@ async def calculate_checkout_endpoint(order_id: Optional[int] = None, customer_n
 #     db.commit()
 #     return {"detail": f"Deleted all the checkout info from the CheckoutInfo table"}
 
+# @payment_router.post("/payment/create-intent", response_model=PaymentIntentResponse)
+# async def create_payment_intent(data: PaymentIntentRequest, db: Session = Depends(get_db)):
+#     stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+
+#     subtotal = sum(item.price * item.quantity for item in data.items)
+
+#     has_physical = any(getattr(item.product_type, "value", item.product_type) == ProductType.physical.value for item in data.items )
+#     shipping_fee = Decimal("0.0")
+#     tax = Decimal("0.0")
+
+#     shipping_payload = None
+#     if has_physical:
+#         if not data.shipping:
+#             raise HTTPException(status_code=400, detail="Shipping info required for physical items")
+        
+#         shipping_fee, tax = calculate_order_shipping_and_tax(data.items, data.shipping.country_code)
+
+#         shipping_payload = {
+#             "name": data.customer.name,
+#             "address": {
+#                 "line1": data.shipping.address_line1,
+#                 "line2": data.shipping.address_line2 or "",
+#                 "city": data.shipping.city,
+#                 "state": data.shipping.state,
+#                 "postal_code": data.shipping.postal_code,
+#                 "country": data.shipping.country_code,
+#             }
+#         }
+
+#     order_total = subtotal + float(shipping_fee) + float(tax)
+
+#     try:
+#         intent = stripe.PaymentIntent.create(
+#             amount=int(order_total * 100),
+#             currency="GBP",
+#             metadata={
+#                 "customer_name": data.customer.name,
+#                 "customer_email": data.customer.email,
+#             },
+#             shipping=shipping_payload 
+#         )
+
+#     except Exception as e:
+#         raise HTTPException(status_code=400, detail=f"Stripe error: {str(e)}")
+
+    # order_items_list = []
+    # for item in data.items:
+    #     product = db.query(Products).filter_by(id=item.product_id).first()
+    #     if not product:
+    #         raise HTTPException(status_code=404, detail=f"Product {item.product_id} not found")
+        # order_items_list.append(
+        #     OrderItem(
+        #         product_id=product.id,
+        #         product_type=item.product_type,
+        #         price_at_purchase=float(item.price),
+        #         quantity=item.quantity
+        #     )
+        # )
+
+#     order = Orders(
+#         customer_name=data.customer.name,
+#         customer_email=data.customer.email,
+#         phone_number=data.customer.phone,
+#         status=StatusType.pending,
+#         order_total=order_total,
+#         items=order_items_list
+#     )
+
+    # checkout_info = CheckoutInfo(
+    #     order=order,
+    #     customer_name=data.customer.name,
+    #     email=data.customer.email,
+    #     phone_number=data.customer.phone,
+    #     transaction_id=intent.id,
+    #     amount_to_be_paid=order_total,
+    #     amount_paid=0.0,
+    #     currency="GBP",
+    #     payment_status=StatusType.pending,
+    #     shipping_fee=float(shipping_fee),
+    #     tax_amount=float(tax),
+    #     items=order_items_list
+    # )
+
+    # db.add(checkout_info)
+    # db.commit()
+    # db.refresh(checkout_info)
+
+    # if has_physical:
+    #     shipping_record = Shipping(
+    #         order_id=checkout_info.order.id,
+    #         address_line1=data.shipping.address_line1,
+    #         address_line2=data.shipping.address_line2 or "",
+    #         city=data.shipping.city,
+    #         state=data.shipping.state,
+    #         postal_code=data.shipping.postal_code,
+    #         country_code=data.shipping.country_code,
+    #         shipping_fee=float(shipping_fee),
+    #         tax=float(tax)
+    #     )
+
+    #     db.add(shipping_record)
+    #     db.commit()
+    #     db.refresh(shipping_record)
+
+    # return PaymentIntentResponse(
+    #     client_secret=intent.client_secret,
+    #     amount=order_total,
+    #     currency="GBP"
+    # )
+
+# @payment_router.post("/payment/webhook")
+# async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
+#     STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
+    
+#     payload = await request.body()
+#     sig_header = request.headers.get("stripe-signature")
+
+#     try:
+#         event = stripe.Webhook.construct_event(payload, sig_header, STRIPE_WEBHOOK_SECRET)
+#     except stripe.error.SignatureVerificationError:
+#         raise HTTPException(status_code=400, detail="Invalid Stripe signature")
+#     except Exception as e:
+#         raise HTTPException(status_code=400, detail=f"Webhook error: {str(e)}")
+
+#     if event["type"] == "payment_intent.succeeded":
+#         intent = event["data"]["object"]
+#         transaction_id = intent["id"]
+
+        # checkout_info = db.query(CheckoutInfo).filter(CheckoutInfo.transaction_id == transaction_id).first()
+        # if not checkout_info:
+        #     raise HTTPException(status_code=404, detail="Checkout Info not found")
+
+        # try:
+        #     checkout_info.payment_status = StatusType.succeeded.value
+        #     checkout_info.amount_paid = checkout_info.amount_to_be_paid
+        #     db.flush()
+
+        #     if not checkout_info.order_id:
+        #         new_order = Orders(
+        #             customer_name=checkout_info.customer_name,
+        #             customer_email=checkout_info.email,
+        #             status=StatusType.ordered.value,
+        #             created_at=datetime.utcnow(),
+        #             order_total=checkout_info.amount_to_be_paid,
+        #         )
+        #         db.add(new_order)
+        #         db.flush()
+
+#                 checkout_info.order_id = new_order.id
+
+            #     for item in checkout_info.items:
+            #         order_item = OrderItem(
+            #             order_id=new_order.id,
+            #             product_id=item["product_id"],
+            #             product_type=item["product_type"],
+            #             quantity=item["quantity"],
+            #             price_at_purchase=float(item["price"] * item["quantity"]),
+            #             checkout_info_id=checkout_info.id
+            #         )
+            #         db.add(order_item)
+            #     db.flush()
+            # else:
+            #     new_order = db.query(Orders).filter(Orders.id == checkout_info.order_id).first()
+
+            # send_order_confirmation_email(new_order,db)
+
+    #     except Exception as e:
+    #         db.rollback() 
+    #         raise HTTPException(status_code=500, detail=f"Error processing webhook: {str(e)}")
+
+    # elif event["type"] == "payment_intent.payment_failed":
+    #     intent = event["data"]["object"]
+    #     transaction_id = intent["id"]
+    #     checkout_info = db.query(CheckoutInfo).filter(CheckoutInfo.transaction_id == transaction_id).first()
+    #     if checkout_info:
+    #         checkout_info.payment_status = StatusType.failed.value
+    #         db.commit()
+
+    # return {"status": "success"}
+
 @payment_router.post("/payment/create-intent", response_model=PaymentIntentResponse)
 async def create_payment_intent(data: PaymentIntentRequest, db: Session = Depends(get_db)):
     stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
@@ -213,8 +389,8 @@ async def create_payment_intent(data: PaymentIntentRequest, db: Session = Depend
     has_physical = any(getattr(item.product_type, "value", item.product_type) == ProductType.physical.value for item in data.items )
     shipping_fee = Decimal("0.0")
     tax = Decimal("0.0")
-
     shipping_payload = None
+
     if has_physical:
         if not data.shipping:
             raise HTTPException(status_code=400, detail="Shipping info required for physical items")
@@ -235,21 +411,6 @@ async def create_payment_intent(data: PaymentIntentRequest, db: Session = Depend
 
     order_total = subtotal + float(shipping_fee) + float(tax)
 
-    try:
-        stripe.api_key = stripe.api_key
-        intent = stripe.PaymentIntent.create(
-            amount=int(order_total * 100),
-            currency="GBP",
-            metadata={
-                "customer_name": data.customer.name,
-                "customer_email": data.customer.email,
-            },
-            shipping=shipping_payload 
-        )
-
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Stripe error: {str(e)}")
-
     order_items_list = []
     for item in data.items:
         product = db.query(Products).filter_by(id=item.product_id).first()
@@ -263,18 +424,23 @@ async def create_payment_intent(data: PaymentIntentRequest, db: Session = Depend
                 quantity=item.quantity
             )
         )
+        
+    try:
+        intent = stripe.PaymentIntent.create(
+            amount=int(order_total * 100),
+            currency="GBP",
+            metadata={
+                "customer_name": data.customer.name,
+                "customer_email": data.customer.email,
+            },
+            shipping=shipping_payload 
+        )
 
-    order = Orders(
-        customer_name=data.customer.name,
-        customer_email=data.customer.email,
-        phone_number=data.customer.phone,
-        status=StatusType.pending,
-        order_total=order_total,
-        items=order_items_list
-    )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Stripe error: {str(e)}")
+    
 
     checkout_info = CheckoutInfo(
-        order=order,
         customer_name=data.customer.name,
         email=data.customer.email,
         phone_number=data.customer.phone,
@@ -285,7 +451,6 @@ async def create_payment_intent(data: PaymentIntentRequest, db: Session = Depend
         payment_status=StatusType.pending,
         shipping_fee=float(shipping_fee),
         tax_amount=float(tax),
-        items=order_items_list
     )
 
     db.add(checkout_info)
@@ -294,7 +459,7 @@ async def create_payment_intent(data: PaymentIntentRequest, db: Session = Depend
 
     if has_physical:
         shipping_record = Shipping(
-            order_id=checkout_info.order.id,
+            order_id=checkout_info.id,
             address_line1=data.shipping.address_line1,
             address_line2=data.shipping.address_line2 or "",
             city=data.shipping.city,
@@ -317,63 +482,70 @@ async def create_payment_intent(data: PaymentIntentRequest, db: Session = Depend
 
 @payment_router.post("/payment/webhook")
 async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
+    stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
     STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
-    
+
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature")
 
     try:
         event = stripe.Webhook.construct_event(payload, sig_header, STRIPE_WEBHOOK_SECRET)
     except stripe.error.SignatureVerificationError:
-        raise HTTPException(status_code=400, detail="Invalid Stripe signature")
+        return HTTPException(status_code=400, content={"error": "Invalid signature"})
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Webhook error: {str(e)}")
+        return HTTPException(status_code=400, content={"error": str(e)})
 
     if event["type"] == "payment_intent.succeeded":
         intent = event["data"]["object"]
         transaction_id = intent["id"]
+        metadata = intent.get("metadata", {})
 
         checkout_info = db.query(CheckoutInfo).filter(CheckoutInfo.transaction_id == transaction_id).first()
         if not checkout_info:
-            raise HTTPException(status_code=404, detail="Checkout Info not found")
+                raise HTTPException(status_code=404, detail="Checkout not found for transaction: {transaction_id}")
 
         try:
             checkout_info.payment_status = StatusType.succeeded.value
             checkout_info.amount_paid = checkout_info.amount_to_be_paid
-            db.flush()
 
-            if not checkout_info.order_id:
-                new_order = Orders(
+            order = Orders(
                     customer_name=checkout_info.customer_name,
                     customer_email=checkout_info.email,
-                    status=StatusType.ordered.value,
-                    created_at=datetime.utcnow(),
+                    phone_number=checkout_info.phone_number,
+                    status=StatusType.ordered,
                     order_total=checkout_info.amount_to_be_paid,
                 )
-                db.add(new_order)
-                db.flush()
+            db.add(order)
+            db.flush()
 
-                checkout_info.order_id = new_order.id
+            for item in checkout_info.items:
+                # order_item = OrderItem(
+                #     order_id=order.id,
+                #     product_id=item["product_id"],
+                #     product_type=item["product_type"],
+                #     quantity=item["quantity"],
+                #     price_at_purchase=float(item["price"] * item["quantity"]),
+                #     checkout_info_id=checkout_info.id
+                # )
+                # db.add(order_item)
+                item.order_id = order.id
+            db.flush()
 
-                for item in checkout_info.items:
-                    order_item = OrderItem(
-                        order_id=new_order.id,
-                        product_id=item["product_id"],
-                        product_type=item["product_type"],
-                        quantity=item["quantity"],
-                        price_at_purchase=float(item["price"] * item["quantity"]),
-                        checkout_info_id=checkout_info.id
-                    )
-                    db.add(order_item)
-                db.flush()
-            else:
-                new_order = db.query(Orders).filter(Orders.id == checkout_info.order_id).first()
+            checkout_info.order_id = order.id
 
-            send_order_confirmation_email(new_order,db)
+            shipping=db.query(Shipping).filter(Shipping.order_id==checkout_info.id).first()
+            if shipping:
+                shipping.order_id = order.id
+                
+            db.commit()
+            db.refresh(order)
+
+            send_order_confirmation_email(order,db)
+            logger.info(f"Order {order.id} created successfully")
 
         except Exception as e:
             db.rollback() 
-            raise HTTPException(status_code=500, detail=f"Error processing webhook: {str(e)}")
+            logger.error(f"Webhook error: {str(e)}")
 
     elif event["type"] == "payment_intent.payment_failed":
         intent = event["data"]["object"]
@@ -384,32 +556,6 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
             db.commit()
 
     return {"status": "success"}
-
-# @payment_router.post("/payment/webhook-test/{order_id}")
-# async def stripe_webhook_test(order_id: int, request: Request, db: Session = Depends(get_db)):
-#     payload = await request.json()
-
-#     event_type = payload.get("type")
-#     intent = payload.get("data", {}).get("object", {})
-#     transaction_id = intent.get("id")
-
-#     checkout_info = db.query(CheckoutInfo).filter(CheckoutInfo.transaction_id == transaction_id, CheckoutInfo.order_id == order_id).first()
-#     if not checkout_info:
-#         raise HTTPException(status_code=404, detail="Either Order / Transcation ID is Incorrect")
-
-#     if checkout_info:
-#         checkout_info.payment_status = StatusType.succeeded.value
-#         checkout_info.amount_paid = checkout_info.amount_to_be_paid
-#         db.commit()
-#         db.refresh(checkout_info)
-
-#     order = db.query(Orders).filter(Orders.id == order_id).first()
-#     if order:
-#             order.status = StatusType.paid 
-#             db.commit()
-#             db.refresh(order)
-
-#     return {"status": "success"}
 
 @orders_router.delete("/delete-an-order")
 async def delete_an_order(order_id: Optional[int]= None, customer_name: Optional[str]= None, db: Session = Depends(get_db)):
@@ -426,12 +572,6 @@ async def delete_an_order(order_id: Optional[int]= None, customer_name: Optional
     db.delete(delete_order_query)
     db.commit()
     return {"detail": f"Order ID {order_id or ''} / Customer {customer_name or ''} has been deleted"}
-
-# @orders_router.delete("/delete-all-orderitems")
-# async def delete_all_orderitems(db: Session = Depends(get_db)):
-#     delete = db.query(OrderItem).delete()
-#     db.commit()
-#     return{"detail": "deleted all order items from the OrderItems table"}
 
 @orders_router.delete("/delete-all-orders")
 async def delete_all_orders(db: Session = Depends(get_db)):

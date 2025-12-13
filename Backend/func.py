@@ -190,12 +190,6 @@ def send_order_confirmation_email(order: Orders, db: Session):
             for link in download_links
         )
 
-        # download_section = f"""
-        #     <p>Kindly find your downloadable file(s) below:</p>
-        #     <ul>
-        #         {links_html}
-        #     </ul>
-        # """
         download_section = f"""
             <h3 style="margin: 24px 0 12px 0; font-size: 16px; font-weight: 600; color: #171F22;">
                 Your Digital Downloads:
@@ -667,15 +661,3 @@ def generate_signed_cloudinary_url(original_url: str, expiry_seconds: int = 3600
         sign_url=False,
     )
     return signed_url
-
-# def reset_primary_key_sequence():
-#     db = Orders()  # create an active DB session
-#     try:
-#         db.execute(text('ALTER SEQUENCE "Photos_id_seq" RESTART WITH 1'))
-#         db.commit()
-#         print("✅ Sequence reset successfully")
-#     except Exception as e:
-#         db.rollback()
-#         print("❌ Error resetting sequence:", e)
-#     finally:
-#         db.close()
