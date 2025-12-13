@@ -7,28 +7,24 @@ import requests
 import io
 from decimal import Decimal
 from datetime import datetime
+import resend
 import uuid
 import logging
-import smtplib
 import cloudinary
 import cloudinary.uploader
 import time
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from tables import Orders, OrderItem, Shipping, CheckoutInfo, ShippingInfo, Products, Portfolio, PortfolioImages
-from email.mime.multipart import MIMEMultipart
 from schemas import DimensionType, DIMENSION_DETAILS, ProductType
-from email.mime.text import MIMEText
 from dotenv import load_dotenv
 from sqlalchemy import text
 from passlib.context import CryptContext
 
 load_dotenv()
-
-SMTP_SERVER = "smtp.zoho.eu"
-SMTP_PORT = 587                          
-SMTP_USERNAME = os.getenv("SMTP_USERNAME")
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
+                   
+resend.api_key = os.getenv("RESEND_API")
+FROM_EMAIL = os.getenv("RESEND_FROM_EMAIL")
 
 logger = logging.getLogger(__name__)
 
@@ -163,58 +159,166 @@ def upload_pic_of_week(image_path: str = None, image_url: str = None) -> str:
 
 def send_order_confirmation_email(order: Orders, db: Session):
     download_links = []
+    
+    has_physical_items = any(
+        getattr(item.product_type, "value", item.product_type) == ProductType.physical.value 
+        for item in order.items
+    )
 
     for item in order.items:
-        if getattr(item.product_type, "value", str(item.product_type)).lower() == "digital":
-                product = db.query(Products).filter(Products.id == item.product_id).first()
-                if product and product.image_url:
-                    download_links.append({
-                        "title": product.title,
-                        "url": product.image_url
-                    })
+        if getattr(item.product_type, "value", item.product_type) == ProductType.digital.value:
+            product = db.query(Products).filter(Products.id == item.product_id).first()
+            if product and product.image_url:
+                download_links.append({
+                    "title": product.title,
+                    "url": product.image_url
+                })
 
     if len(order.items) == 1:
         product_title = order.items[0].product.title
     else:
-        product_title = ", ".join(
-            [item.product.title for item in order.items]
-        )
+        product_title = ", ".join([item.product.title for item in order.items[:-1]]) + f" and {order.items[-1].product.title}"
 
-    msg = MIMEMultipart("alternative")
-    msg["From"] = SMTP_USERNAME
-    msg["To"] = order.customer_email
-    msg["Subject"] = f"Order Confirmation for {product_title}"
+    items_html = ""
+    for item in order.items:
+        item_type = getattr(item.product_type, "value", item.product_type)
+        items_html += f'<li style="margin-bottom: 8px; color: #333333; font-size: 15px;">{item.quantity}x {item.product.title} ({item_type})</li>'
 
     if download_links:
         links_html = "".join(
-            f'<li><a href="{link["url"]}" target="_blank">{link["title"]}</a></li>'
+            f'<li style="margin-bottom: 8px;"><a href="{link["url"]}" target="_blank" style="color: #171F22; text-decoration: underline;">{link["title"]}</a></li>'
             for link in download_links
         )
+
+        # download_section = f"""
+        #     <p>Kindly find your downloadable file(s) below:</p>
+        #     <ul>
+        #         {links_html}
+        #     </ul>
+        # """
         download_section = f"""
-            <p>Kindly find your downloadable file(s) below:</p>
+            <h3 style="margin: 24px 0 12px 0; font-size: 16px; font-weight: 600; color: #171F22;">
+                Your Digital Downloads:
+            </h3>
             <ul>
                 {links_html}
             </ul>
         """
     else:
-        download_section = "<p>No digital downloads associated with this order.</p>"
+        download_section = "<p> No digital downloads associated with this order.</p>"
+    
 
+    if has_physical_items:
+        physical_notice = """
+            <div style="background-color: #f8f9fa; border-left: 4px solid #171F22; padding: 16px 20px; margin: 24px 0;">
+                <p style="margin: 0; color: #333333; font-size: 14px; line-height: 1.6;">
+                    📦 <strong>Physical Items:</strong> You'll receive a separate email with shipping details and tracking information once your order has been dispatched.
+                </p>
+            </div>
+        """
+    else:
+        physical_notice = ""
 
     html_content = f"""
-        <p>Hi {order.customer_name},</p>
-        <p>Thank you for purchasing {product_title}.</p>
-        <p>It’s always a pleasure to have you as a customer. Enjoy your photos!</p>
-        {download_section}
-        <p>Best regards,<br/>UIAPhotography</p>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Order Confirmation</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f5f5f5;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f5f5f5;">
+            <tr>
+                <td style="padding: 40px 20px;">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="margin: 0 auto; max-width: 600px;">
+                        
+                        <!-- Header -->
+                        <tr>
+                            <td style="background-color: #171F22; padding: 40px 40px; text-align: center;">
+                                <h1 style="margin: 0; font-family: 'Courier New', monospace; font-size: 24px; font-weight: 400; color: #ffffff; letter-spacing: 8px;">
+                                    U.I.A PHOTOGRAPHY
+                                </h1>
+                            </td>
+                        </tr>
+                        
+                        <!-- Divider Line -->
+                        <tr>
+                            <td style="background-color: #2a3439; height: 4px;"></td>
+                        </tr>
+                        
+                        <!-- Main Content -->
+                        <tr>
+                            <td style="background-color: #ffffff; padding: 48px 40px;">
+                                <h2 style="margin: 0 0 24px 0; font-size: 22px; font-weight: 600; color: #171F22;">
+                                    Hi {order.customer_name},
+                                </h2>
+                                
+                                <p style="margin: 0 0 8px 0; color: #333333; font-size: 15px; line-height: 1.6;">
+                                    Thank you for your order!
+                                </p>
+                                <p style="margin: 0 0 32px 0; color: #333333; font-size: 15px; line-height: 1.6;">
+                                    It's always a pleasure to have you as a customer. Enjoy your photos!
+                                </p>
+                                
+                                <!-- Order Summary -->
+                                <h3 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 600; color: #171F22;">
+                                    Order Summary (#{order.id}):
+                                </h3>
+                                <ul style="margin: 0 0 24px 0; padding-left: 20px;">
+                                    {items_html}
+                                </ul>
+                                
+                                {download_section}
+                                
+                                {physical_notice}
+                                
+                                <p style="margin: 0; color: #333333; font-size: 15px; line-height: 1.6;">
+                                    Best regards,<br/>
+                                    <strong>UIAPhotography.</strong>
+                                </p>
+                            </td>
+                        </tr>
+                        
+                        <!-- Footer -->
+                        <tr>
+                            <td style="background-color: #171F22; padding: 32px 40px; text-align: center;">
+                                <!-- Social Links -->
+                                <p style="margin: 0 0 16px 0;">
+                                    <a href="https://instagram.com" style="color: #ffffff; text-decoration: none; font-size: 14px; margin: 0 12px;">Instagram</a>
+                                    <span style="color: #ffffff;">|</span>
+                                    <a href="https://twitter.com" style="color: #ffffff; text-decoration: none; font-size: 14px; margin: 0 12px;">Twitter</a>
+                                    <span style="color: #ffffff;">|</span>
+                                    <a href="mailto:contact@uiaphotography.com" style="color: #ffffff; text-decoration: none; font-size: 14px; margin: 0 12px;">Email</a>
+                                </p>
+                                
+                                <!-- Copyright -->
+                                <p style="margin: 0; color: #ffffff; font-size: 13px;">
+                                    ©️ 2025 UIAPhotography. All rights reserved.
+                                </p>
+                            </td>
+                        </tr>
+                        
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>
     """
-    msg.attach(MIMEText(html_content, "html"))
-
-    with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-        server.starttls()
-        server.login(SMTP_USERNAME, SMTP_PASSWORD)
-        server.sendmail(SMTP_USERNAME, order.customer_email, msg.as_string())
-
-    logger.info(f"Order confirmation email sent to {order.customer_email} for order_id {order.id}")
+    try:
+        response = resend.Emails.send({
+            "from": FROM_EMAIL,
+            "to": order.customer_email,
+            "bcc": "no-reply@uiaphotography.com",
+            "subject": f"Order Confirmation for {product_title}",
+            "html": html_content
+        })
+        logger.info(f"Order confirmation email sent to {order.customer_email} for order_id {order.id}")
+        return response
+    except Exception as e:
+        logger.error(f"Failed to send order confirmation email: {e}")
+        raise
 
 def send_order_status_email(order: Orders, db):
     product_titles = ", ".join(f"{item.quantity} {item.product.title} ({item.product_type.value})"for item in order.items) if order.items else "your products"
@@ -224,34 +328,123 @@ def send_order_status_email(order: Orders, db):
         shipping_carrier = shipping_info.carrier
         tracking_number = shipping_info.tracking_number
         tracking_url = shipping_info.tracking_url or "#"
-        estimated_delivery = getattr(shipping_info, "estimated_delivery", "N/A")
+        estimated_delivery = getattr(shipping_info, "ç", "N/A")
     else:
         shipping_carrier = tracking_number = tracking_url = estimated_delivery = "N/A"
 
-    msg = MIMEMultipart("alternative")
-    msg["From"] = SMTP_USERNAME
-    msg["To"] = order.customer_email
-    msg["Subject"] = f"Your Order #{order.id} Has Shipped!"
-
     html_content = f"""
-        <p>Hi {order.customer_name},</p>
-        <p>Great news! Your order <strong>#{order.id}</strong> has been shipped and is on its way.</p>
-        <p><strong>Order Summary:</strong><br/>{product_titles}</p>
-        <p><strong>Shipping Details:</strong><br/>
-           Carrier: {shipping_carrier}<br/>
-           Tracking Number: {tracking_number}<br/>
-        <p>You can track your package here: <a href="{tracking_url}">Track My Order</a></p>
-        <p>Thank you for shopping with us!</p>
-        <p>Best regards,<br/>UIAPhotography</p>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Order Shipped</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f5f5f5;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f5f5f5;">
+            <tr>
+                <td style="padding: 40px 20px;">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="margin: 0 auto; max-width: 600px;">
+                        
+                        <!-- Header -->
+                        <tr>
+                            <td style="background-color: #171F22; padding: 40px 40px; text-align: center;">
+                                <h1 style="margin: 0; font-family: 'Courier New', monospace; font-size: 24px; font-weight: 400; color: #ffffff; letter-spacing: 8px;">
+                                    U.I.A PHOTOGRAPHY
+                                </h1>
+                            </td>
+                        </tr>
+                        
+                        <!-- Divider Line -->
+                        <tr>
+                            <td style="background-color: #2a3439; height: 4px;"></td>
+                        </tr>
+                        
+                        <!-- Main Content -->
+                        <tr>
+                            <td style="background-color: #ffffff; padding: 48px 40px;">
+                                <h2 style="margin: 0 0 24px 0; font-size: 22px; font-weight: 600; color: #171F22;">
+                                    Hi {order.customer_name},
+                                </h2>
+                                
+                                <p style="margin: 0 0 28px 0; color: #333333; font-size: 15px; line-height: 1.6;">
+                                    Great news! Your order <strong>#{order.id}</strong> has been shipped and is on its way.
+                                </p>
+                                
+                                <!-- Order Summary -->
+                                <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #171F22;">
+                                    Order Summary:
+                                </h3>
+                                <p style="margin: 0 0 24px 0; color: #333333; font-size: 15px; line-height: 1.6;">
+                                    {product_titles}
+                                </p>
+                                
+                                <!-- Shipping Details -->
+                                <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #171F22;">
+                                    Shipping Details:
+                                </h3>
+                                <p style="margin: 0 0 4px 0; color: #333333; font-size: 15px; line-height: 1.6;">
+                                    Carrier: {shipping_carrier}
+                                </p>
+                                <p style="margin: 0 0 24px 0; color: #333333; font-size: 15px; line-height: 1.6;">
+                                    Tracking Number: {tracking_number}
+                                </p>
+                                
+                                <!-- Track Order Link -->
+                                <p style="margin: 0 0 32px 0; color: #333333; font-size: 15px; line-height: 1.6;">
+                                    You can track your package here: <a href="{tracking_url}" style="color: #171F22; text-decoration: underline; font-weight: 500;">Track My Order</a>
+                                </p>
+                                
+                                <p style="margin: 0 0 24px 0; color: #333333; font-size: 15px; line-height: 1.6;">
+                                    Thank you for shopping with us!
+                                </p>
+                                
+                                <p style="margin: 0; color: #333333; font-size: 15px; line-height: 1.6;">
+                                    Best regards,<br/>
+                                    <strong>UIAPhotography.</strong>
+                                </p>
+                            </td>
+                        </tr>
+                        
+                        <!-- Footer -->
+                        <tr>
+                            <td style="background-color: #171F22; padding: 32px 40px; text-align: center;">
+                                <!-- Social Links -->
+                                <p style="margin: 0 0 16px 0;">
+                                    <a href="https://instagram.com" style="color: #ffffff; text-decoration: none; font-size: 14px; margin: 0 12px;">Instagram</a>
+                                    <span style="color: #ffffff;">|</span>
+                                    <a href="https://twitter.com" style="color: #ffffff; text-decoration: none; font-size: 14px; margin: 0 12px;">Twitter</a>
+                                    <span style="color: #ffffff;">|</span>
+                                    <a href="mailto:contact@uiaphotography.com" style="color: #ffffff; text-decoration: none; font-size: 14px; margin: 0 12px;">Email</a>
+                                </p>
+                                
+                                <!-- Copyright -->
+                                <p style="margin: 0; color: #ffffff; font-size: 13px;">
+                                    ©️ 2025 UIAPhotography. All rights reserved.
+                                </p>
+                            </td>
+                        </tr>
+                        
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>
     """
-    msg.attach(MIMEText(html_content, "html"))
-
-    with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-        server.starttls()
-        server.login(SMTP_USERNAME, SMTP_PASSWORD)
-        server.sendmail(SMTP_USERNAME, order.customer_email, msg.as_string())
-
-    logger.info(f"Order shipped email sent to {order.customer_email} for order_id {order.id}")
+    try:
+        response = resend.Emails.send({
+            "from": FROM_EMAIL,
+            "to": order.customer_email,
+            "bcc": "no-reply@uiaphotography.com",
+            "subject": f"Your Order #{order.id} Has Shipped!",
+            "html": html_content
+        })
+        logger.info(f"Order shipped email sent to {order.customer_email} for order_id {order.id}")
+        return response
+    except Exception as e:
+        logger.error(f"Failed to send order status email: {e}")
+        raise
 
 def calculate_order_weight(order_or_items, db: Session, gsm: float = 300):
     items = getattr(order_or_items, "items", order_or_items)
