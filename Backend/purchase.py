@@ -19,6 +19,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from decimal import Decimal
 from sqlalchemy import text
+from fastapi.responses import JSONResponse
 
 logger = logging.getLogger(__name__)
 
@@ -382,7 +383,7 @@ async def calculate_checkout_endpoint(order_id: Optional[int] = None, customer_n
 
 @payment_router.post("/payment/create-intent", response_model=PaymentIntentResponse)
 async def create_payment_intent(data: PaymentIntentRequest, db: Session = Depends(get_db)):
-    stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+    stripe.api_key = os.getenv("STRIPE_SECRET_KEY1")
 
     subtotal = sum(item.price * item.quantity for item in data.items)
 
@@ -482,18 +483,25 @@ async def create_payment_intent(data: PaymentIntentRequest, db: Session = Depend
 
 @payment_router.post("/payment/webhook")
 async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
-    stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-    STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
+    stripe.api_key = os.getenv("STRIPE_SECRET_KEY1")
+    STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET1")
+
+    logger.info(f"Webhook secret loaded: {bool(STRIPE_WEBHOOK_SECRET)}")
+    logger.info(f"Webhook secret starts with: {STRIPE_WEBHOOK_SECRET[:10] if STRIPE_WEBHOOK_SECRET else 'None'}...")
 
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature")
 
+    logger.info(f"Signature header exists: {bool(sig_header)}")
+
     try:
         event = stripe.Webhook.construct_event(payload, sig_header, STRIPE_WEBHOOK_SECRET)
     except stripe.error.SignatureVerificationError:
-        return HTTPException(status_code=400, content={"error": "Invalid signature"})
+        logger.error(f"Signature verification failed: {str(e)}")
+        return JSONResponse(status_code=400, content={"error": "Invalid signature"})
     except Exception as e:
-        return HTTPException(status_code=400, content={"error": str(e)})
+        logger.error(f"Webhook error: {str(e)}")
+        return JSONResponse(status_code=400, content={"error": str(e)})
 
     if event["type"] == "payment_intent.succeeded":
         intent = event["data"]["object"]
