@@ -570,7 +570,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                     shipping_fee=float(metadata.get("shipping_fee", 0)),
                     tax=float(metadata.get("shipping_tax", 0))
                 )
-            db.add(shipping_record)
+                db.add(shipping_record)
                 
             db.commit()
             db.refresh(order)
