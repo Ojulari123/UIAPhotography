@@ -699,12 +699,18 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
             checkout_info.payment_status = StatusType.succeeded.value
             checkout_info.amount_paid = checkout_info.amount_to_be_paid
 
+            has_physical = any(
+                getattr(item.product_type, "value", item.product_type) == ProductType.physical.value 
+                for item in checkout_info.items
+            )
+            order_status = StatusType.ordered if has_physical else StatusType.delivered
+
             # Create Order
             order = Orders(
                 customer_name=checkout_info.customer_name,
                 customer_email=checkout_info.email,
                 phone_number=checkout_info.phone_number,
-                status=StatusType.ordered,
+                status=order_status,
                 order_total=checkout_info.amount_to_be_paid,
             )
             db.add(order)

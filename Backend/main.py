@@ -31,8 +31,12 @@ connection_manager = ConnectionManager()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],          # replace when frontend is ready
-    allow_credentials=True,        
+    allow_origins=[
+        "https://uiaphotography.com",
+        "https://www.uiaphotography.com",
+        "https://uiaphotography.onrender.com"
+        ],         
+    allow_credentials=False,        
     allow_methods=["*"],          
     allow_headers=["*"],           
 )
