@@ -476,22 +476,22 @@ async def create_payment_intent(data: PaymentIntentRequest, db: Session = Depend
     db.commit()
     db.refresh(checkout_info)
 
-    # if has_physical:
-    #     shipping_record = Shipping(
-    #         order_id=checkout_info.id,
-    #         address_line1=data.shipping.address_line1,
-    #         address_line2=data.shipping.address_line2 or "",
-    #         city=data.shipping.city,
-    #         state=data.shipping.state,
-    #         postal_code=data.shipping.postal_code,
-    #         country_code=data.shipping.country_code,
-    #         shipping_fee=float(shipping_fee),
-    #         tax=float(tax)
-    #     )
+    if has_physical:
+        shipping_record = Shipping(
+            order_id=checkout_info.id,
+            address_line1=data.shipping.address_line1,
+            address_line2=data.shipping.address_line2 or "",
+            city=data.shipping.city,
+            state=data.shipping.state,
+            postal_code=data.shipping.postal_code,
+            country_code=data.shipping.country_code,
+            shipping_fee=float(shipping_fee),
+            tax=float(tax)
+        )
 
-    #     db.add(shipping_record)
-    #     db.commit()
-    #     db.refresh(shipping_record)
+        db.add(shipping_record)
+        db.commit()
+        db.refresh(shipping_record)
 
     return PaymentIntentResponse(
         client_secret=intent.client_secret,
@@ -558,19 +558,9 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
 
             checkout_info.order_id = order.id
 
-            if metadata.get("has_physical") == "true":
-                shipping_record = Shipping(
-                    order_id=order.id,  # Now order exists!
-                    address_line1=metadata.get("shipping_address_line1", ""),
-                    address_line2=metadata.get("shipping_address_line2", ""),
-                    city=metadata.get("shipping_city", ""),
-                    state=metadata.get("shipping_state", ""),
-                    postal_code=metadata.get("shipping_postal_code", ""),
-                    country_code=metadata.get("shipping_country_code", ""),
-                    shipping_fee=float(metadata.get("shipping_fee", 0)),
-                    tax=float(metadata.get("shipping_tax", 0))
-                )
-                db.add(shipping_record)
+            shipping=db.query(Shipping).filter(Shipping.order_id==checkout_info.id).first()
+            if shipping:
+                shipping.order_id = order.id
                 
             db.commit()
             db.refresh(order)
