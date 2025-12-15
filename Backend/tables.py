@@ -44,7 +44,7 @@ class CheckoutInfo(Base):
     __tablename__ = "Checkout_Info"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    order_id = Column(Integer, ForeignKey("Orders.id", ondelete="CASCADE"), nullable=False, unique=True)  
+    order_id = Column(Integer, ForeignKey("Orders.id", ondelete="CASCADE"), nullable=True, unique=True)  
     customer_name = Column(String(255), nullable=False)                     
     email = Column(String(255), nullable=False)
     phone_number = Column(String(25))  
@@ -80,7 +80,7 @@ class OrderItem(Base):
     __tablename__ = "OrderItems"
 
     id = Column(Integer, primary_key=True)
-    order_id = Column(Integer, ForeignKey("Orders.id", ondelete="CASCADE"), nullable=False)
+    order_id = Column(Integer, ForeignKey("Orders.id", ondelete="CASCADE"), nullable=True)
     product_id = Column(Integer, ForeignKey("Photos.id"), nullable=False)
     product_type = Column(Enum(ProductType, name="product_type_enum"), nullable=False)
     price_at_purchase = Column(Numeric(6, 2), nullable=False)

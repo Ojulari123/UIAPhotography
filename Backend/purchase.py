@@ -514,21 +514,11 @@ async def create_payment_intent(data: PaymentIntentRequest, db: Session = Depend
 
     order_total = subtotal + float(shipping_fee) + float(tax)
 
-    order_items_list = []
     for item in data.items:
         product = db.query(Products).filter_by(id=item.product_id).first()
         if not product:
             raise HTTPException(status_code=404, detail=f"Product {item.product_id} not found")
-        order_items_list.append(
-            OrderItem(
-                product_id=product.id,
-                product_type=item.product_type,
-                price_at_purchase=float(item.price),
-                quantity=item.quantity
-            )
-        )
 
-    # Build metadata with shipping info
     metadata = {
         "customer_name": data.customer.name,
         "customer_email": data.customer.email,
@@ -551,7 +541,7 @@ async def create_payment_intent(data: PaymentIntentRequest, db: Session = Depend
         intent = stripe.PaymentIntent.create(
             amount=int(order_total * 100),
             currency="GBP",
-            metadata=metadata,  # Use the metadata with shipping!
+            metadata=metadata,
             shipping=shipping_payload 
         )
     except Exception as e:
@@ -571,6 +561,18 @@ async def create_payment_intent(data: PaymentIntentRequest, db: Session = Depend
     )
 
     db.add(checkout_info)
+    db.flush()
+
+    for item in data.items:
+        order_item = OrderItem(
+            order_id=None,  # ✅ No order yet
+            product_id=item.product_id,
+            product_type=item.product_type,
+            price_at_purchase=float(item.price),
+            quantity=item.quantity,
+            checkout_info_id=checkout_info.id  # ✅ Link to checkout
+        )
+        db.add(order_item)
     db.commit()
     db.refresh(checkout_info)
 
