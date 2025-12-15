@@ -425,25 +425,6 @@ async def create_payment_intent(data: PaymentIntentRequest, db: Session = Depend
                 quantity=item.quantity
             )
         )
-
-        metadata = {
-        "customer_name": data.customer.name,
-        "customer_email": data.customer.email,
-    }
-    
-    if has_physical:
-        metadata.update({
-            "has_physical": "true",
-            "shipping_address_line1": data.shipping.address_line1,
-            "shipping_address_line2": data.shipping.address_line2 or "",
-            "shipping_city": data.shipping.city,
-            "shipping_state": data.shipping.state,
-            "shipping_postal_code": data.shipping.postal_code,
-            "shipping_country_code": data.shipping.country_code,
-            "shipping_fee": str(float(shipping_fee)),
-            "shipping_tax": str(float(tax)),
-        })
-        
     try:
         intent = stripe.PaymentIntent.create(
             amount=int(order_total * 100),
