@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Kyiv*Type Serif Font */
+@font-face {
+  font-family: 'Kyiv Type Serif';
+  src: url('./assets/fonts/KyivTypeSerif-Medium.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Set DM Sans as default body font */
+@layer base {
+  body {
+    font-family: 'DM Sans', sans-serif;
+  }
+}
