@@ -34,7 +34,7 @@ app.add_middleware(
     allow_origins=[
         "https://uiaphotography.com",
         "https://www.uiaphotography.com",
-        "https://uiaphotography.onrender.com"
+        "https://uiaphotography-frontend.onrender.com"
         ],         
     allow_credentials=False,        
     allow_methods=["*"],          
