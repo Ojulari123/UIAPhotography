@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import useProductStore from '../stores/useProductStore';
 import useCartStore from '../stores/useCartStore';
+import storeBg from '../assets/store.png';
+
 
 function StorePage() {
   const { products, fetchProducts, loading } = useProductStore();
@@ -21,7 +23,7 @@ function StorePage() {
       {/* Hero Section with Store Background */}
       <section className="relative w-full h-[40vh] md:h-[80vh] overflow-hidden">
         <img 
-          src="/src/assets/store.png" 
+          src={storeBg} 
           alt="Store" 
           className="w-full h-full object-cover"
         />

@@ -1,3 +1,9 @@
+// Import images
+import logo from '../../assets/logo.png';
+import emailIcon from '../../assets/Email.svg';
+import instagramIcon from '../../assets/Instagram.svg';
+import xIcon from '../../assets/X.svg';
+
 function Footer() {
   return (
     <footer className="bg-white border-t border-footer-dark">
@@ -6,7 +12,7 @@ function Footer() {
         <div className="flex md:hidden items-center justify-between">
           <div className="flex-shrink-0">
             <img 
-              src="/src/assets/logo.png" 
+              src={logo} 
               alt="UIA Photography" 
               className="h-10 w-auto"
             />
@@ -19,7 +25,7 @@ function Footer() {
               aria-label="Email"
             >
               <img 
-                src="/src/assets/Email.svg" 
+                src={emailIcon} 
                 alt="Email" 
                 className="w-6 h-6"
               />
@@ -33,7 +39,7 @@ function Footer() {
               aria-label="Instagram"
             >
               <img 
-                src="/src/assets/Instagram.svg" 
+                src={instagramIcon} 
                 alt="Instagram" 
                 className="w-6 h-6"
               />
@@ -47,7 +53,7 @@ function Footer() {
               aria-label="Twitter/X"
             >
               <img 
-                src="/src/assets/X.svg" 
+                src={xIcon} 
                 alt="X" 
                 className="w-6 h-6"
               />
@@ -59,7 +65,7 @@ function Footer() {
         <div className="hidden md:flex items-center justify-between gap-4">
           <div className="flex-shrink-0">
             <img 
-              src="/src/assets/logo.png" 
+              src={logo} 
               alt="UIA Photography" 
               className="h-14 w-auto"
             />
@@ -67,7 +73,7 @@ function Footer() {
 
           <div className="text-center flex-grow">
             <p className="text-footer-dark font-dm-sans italic text-base lg:text-lg">
-              “Photography is a love affair with life” - Burk Uzzle
+              "Photography is a love affair with life" - Burk Uzzle
             </p>
           </div>
 
@@ -78,7 +84,7 @@ function Footer() {
               aria-label="Email"
             >
               <img 
-                src="/src/assets/Email.svg" 
+                src={emailIcon} 
                 alt="Email" 
                 className="w-6 h-6"
               />
@@ -92,7 +98,7 @@ function Footer() {
               aria-label="Instagram"
             >
               <img 
-                src="/src/assets/Instagram.svg" 
+                src={instagramIcon} 
                 alt="Instagram" 
                 className="w-6 h-6"
               />
@@ -106,7 +112,7 @@ function Footer() {
               aria-label="Twitter/X"
             >
               <img 
-                src="/src/assets/X.svg" 
+                src={xIcon} 
                 alt="X" 
                 className="w-6 h-6"
               />

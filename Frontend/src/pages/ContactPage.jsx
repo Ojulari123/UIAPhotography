@@ -1,4 +1,9 @@
 import { useState } from 'react';
+import contactBg from '../assets/contact.png';
+import theShotimg from '../assets/theShot.png'; 
+import emailIcon from '../assets/Email.svg';
+import tiktokIcon from '../assets/X.svg'; 
+import instaIcon from '../assets/Instagram.svg'; 
 
 function ContactPage() {
   const [formData, setFormData] = useState({
@@ -62,7 +67,7 @@ function ContactPage() {
       {/* Hero Section with Contact Background */}
       <section className="relative w-full h-[40vh] md:h-[85vh] overflow-hidden">
         <img 
-          src="/src/assets/contact.png" 
+          src={contactBg} 
           alt="Contact" 
           className="w-full h-full object-cover"
         />
@@ -182,7 +187,7 @@ function ContactPage() {
             {/* Image - Hidden on mobile */}
             <div className="hidden lg:block rounded-lg overflow-hidden flex-shrink-0">
               <img 
-                src="/src/assets/theShot.png" 
+                src={theShotimg} 
                 alt="Photographer"
                 className="w-full h-auto object-cover"
                 style={{ maxHeight: '390px', objectFit: 'cover' }}
@@ -197,7 +202,7 @@ function ContactPage() {
                 className="flex items-center gap-3 py-4 hover:opacity-70 transition-opacity"
               >
                 <img 
-                  src="/src/assets/Email.svg" 
+                  src={emailIcon} 
                   alt="Email" 
                   className="w-5 h-5 flex-shrink-0"
                 />
@@ -215,7 +220,7 @@ function ContactPage() {
                 className="flex items-center gap-3 py-4 hover:opacity-70 transition-opacity"
               >
                 <img 
-                  src="/src/assets/Instagram.svg" 
+                  src={instaIcon} 
                   alt="Instagram" 
                   className="w-6 h-6 flex-shrink-0"
                 />
@@ -233,7 +238,7 @@ function ContactPage() {
                 className="flex items-center gap-3 py-4 hover:opacity-70 transition-opacity"
               >
                 <img 
-                  src="/src/assets/X.svg" 
+                  src={tiktokIcon}
                   alt="X" 
                   className="w-6 h-6 flex-shrink-0"
                 />

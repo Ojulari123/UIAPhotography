@@ -3,6 +3,12 @@ import { useParams, Link } from 'react-router-dom';
 import usePortfolioStore from '../stores/usePortfolioStore';
 import Modal from '../components/Modal';
 
+// Import images
+import digitalBg from '../assets/digital.png';
+import natureBg from '../assets/nature.png';
+import wildlifeBg from '../assets/wildlife.png';
+import landscapeBg from '../assets/landscape.png';
+
 function CategoryPage() {
   const { category } = useParams();
   const { portfolios, fetchPortfolios, loading } = usePortfolioStore();
@@ -86,10 +92,10 @@ function CategoryPage() {
   // Get background image based on category
   const getCategoryBg = () => {
     const categoryMap = {
-      digital: '/src/assets/digital.png',
-      nature: '/src/assets/nature.png',
-      wildlife: '/src/assets/wildlife.png',
-      landscape: '/src/assets/landscape.png',
+      digital: digitalBg,
+      nature: natureBg,
+      wildlife: wildlifeBg,
+      landscape: landscapeBg,
     };
     return categoryMap[category.toLowerCase()] || categoryMap.digital;
   };

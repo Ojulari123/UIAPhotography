@@ -3,6 +3,19 @@ import { Link } from 'react-router-dom';
 import usePicOfWeekStore from '../stores/usePicOfWeekStore';
 import Modal from '../components/Modal';
 
+// Import images
+import theHero from '../assets/theHero.png';
+import twoOldFriends from '../assets/twoOldFriends.jpeg';
+import walkingMirror from '../assets/walkingMirror.jpeg';
+import theWomanInScarf from '../assets/theWomanInScarf.jpeg';
+import theEye from '../assets/theEye.jpeg';
+import theGaze from '../assets/theGaze.jpeg';
+import theCut from '../assets/theCut.jpeg';
+import inTheCrowd from '../assets/inTheCrowd.jpeg';
+import gingerLady from '../assets/gingerLady.jpeg';
+import theVixen from '../assets/theVixen.jpeg';
+import fomsImg from '../assets/FomsImg.jpeg';
+
 function HomePage() {
   const { pics, fetchAllPics, loading: picLoading } = usePicOfWeekStore();
 
@@ -12,6 +25,7 @@ function HomePage() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [selectedGalleryImage, setSelectedGalleryImage] = useState(null);
   const [currentGalleryIndex, setCurrentGalleryIndex] = useState(0);
+  
   useEffect(() => {
     fetchAllPics();
   }, [fetchAllPics]);
@@ -21,10 +35,10 @@ function HomePage() {
 
   // Gallery images for modal
   const galleryImages = [
-    { id: 1, src: '/src/assets/twoOldFriends.jpeg', alt: 'Two Old Friends' },
-    { id: 2, src: '/src/assets/walkingMirror.jpeg', alt: 'Walking Mirror' },
-    { id: 3, src: '/src/assets/theWomanInScarf.jpeg', alt: 'The Woman In Scarf' },
-    { id: 4, src: '/src/assets/theEye.jpeg', alt: 'The Eye' },
+    { id: 1, src: twoOldFriends, alt: 'Two Old Friends' },
+    { id: 2, src: walkingMirror, alt: 'Walking Mirror' },
+    { id: 3, src: theWomanInScarf, alt: 'The Woman In Scarf' },
+    { id: 4, src: theEye, alt: 'The Eye' },
   ];
 
   const handleGalleryImageClick = (index) => {
@@ -46,11 +60,11 @@ function HomePage() {
 
   // My Work images
   const workImages = [
-    { id: 1, src: '/src/assets/theGaze.jpeg', alt: 'The Gaze' },
-    { id: 2, src: '/src/assets/theCut.jpeg', alt: 'The Cut' },
-    { id: 3, src: '/src/assets/inTheCrowd.jpeg', alt: 'In The Crowd' },
-    { id: 4, src: '/src/assets/gingerLady.jpeg', alt: 'Ginger Lady' },
-    { id: 5, src: '/src/assets/theVixen.jpeg', alt: 'The Vixen' },
+    { id: 1, src: theGaze, alt: 'The Gaze' },
+    { id: 2, src: theCut, alt: 'The Cut' },
+    { id: 3, src: inTheCrowd, alt: 'In The Crowd' },
+    { id: 4, src: gingerLady, alt: 'Ginger Lady' },
+    { id: 5, src: theVixen, alt: 'The Vixen' },
   ];
 
   const handleWorkImageClick = (index) => {
@@ -75,7 +89,7 @@ function HomePage() {
       {/* Hero Section */}
       <section
         className="relative h-[50vh] md:h-[60vh] lg:h-screen bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: `url('/src/assets/theHero.png')` }}
+        style={{ backgroundImage: `url(${theHero})` }}
       >
         <div className="absolute inset-0 bg-black bg-opacity-40"></div>
         <div className="relative z-10 h-full flex items-center justify-center px-4">
@@ -99,7 +113,7 @@ function HomePage() {
                   onClick={() => handleGalleryImageClick(0)}
                 >
                   <img
-                    src="/src/assets/twoOldFriends.jpeg"
+                    src={twoOldFriends}
                     alt="Two Old Friends"
                     className="w-full h-40 object-cover"
                   />
@@ -110,7 +124,7 @@ function HomePage() {
                   onClick={() => handleGalleryImageClick(1)}
                 >
                   <img
-                    src="/src/assets/walkingMirror.jpeg"
+                    src={walkingMirror}
                     alt="Walking Mirror"
                     className="w-full h-40 object-cover"
                   />
@@ -123,7 +137,7 @@ function HomePage() {
                 onClick={() => handleGalleryImageClick(2)}
               >
                 <img
-                  src="/src/assets/theWomanInScarf.jpeg"
+                  src={theWomanInScarf}
                   alt="The Woman In Scarf"
                   className="w-full h-full object-cover"
                   style={{ height: 'calc(320px + 0.75rem)' }}
@@ -137,7 +151,7 @@ function HomePage() {
               onClick={() => handleGalleryImageClick(3)}
             >
               <img
-                src="/src/assets/theEye.jpeg"
+                src={theEye}
                 alt="The Eye"
                 className="w-full h-48 object-cover"
               />
@@ -146,12 +160,12 @@ function HomePage() {
             {/* Text at bottom on mobile */}
             <div className="text-gray-900 font-dm-sans mt-6">
               <p className="text-base leading-relaxed">
-                Photography is the immortalising of moments, turning brief experiences into memories that last. It’s the capturing of emotion, from the seemingly mundane parts of life, to the tailored moments that are told as stories between loved ones. It’s a curation of perspective, a channeling of creativity and the evidence of seeing what everyone else is dependent on you to see.
+                Photography is the immortalising of moments, turning brief experiences into memories that last. It's the capturing of emotion, from the seemingly mundane parts of life, to the tailored moments that are told as stories between loved ones. It's a curation of perspective, a channeling of creativity and the evidence of seeing what everyone else is dependent on you to see.
               </p>
             </div>
           </div>
 
-          {/* Desktop Layout - 3 columns (unchanged) */}
+          {/* Desktop Layout - 3 columns */}
           <div className="hidden md:grid grid-cols-3 gap-6">
             <div className="flex flex-col">
               <div
@@ -159,14 +173,14 @@ function HomePage() {
                 onClick={() => handleGalleryImageClick(3)}
               >
                 <img
-                  src="/src/assets/theEye.jpeg"
+                  src={theEye}
                   alt="The Eye"
                   className="w-full h-auto object-cover"
                 />
               </div>
               <div className="text-gray-900 font-dm-sans">
                 <p className="text-base leading-relaxed">
-                  Photography is the immortalising of moments, turning brief experiences into memories that last. It’s the capturing of emotion, from the seemingly mundane parts of life, to the tailored moments that are told as stories between loved ones. It’s a curation of perspective, a channeling of creativity and the evidence of seeing what everyone else is dependent on you to see.
+                  Photography is the immortalising of moments, turning brief experiences into memories that last. It's the capturing of emotion, from the seemingly mundane parts of life, to the tailored moments that are told as stories between loved ones. It's a curation of perspective, a channeling of creativity and the evidence of seeing what everyone else is dependent on you to see.
                 </p>
               </div>
             </div>
@@ -177,7 +191,7 @@ function HomePage() {
                 onClick={() => handleGalleryImageClick(0)}
               >
                 <img
-                  src="/src/assets/twoOldFriends.jpeg"
+                  src={twoOldFriends}
                   alt="Two Old Friends"
                   className="w-full h-full object-cover"
                 />
@@ -187,7 +201,7 @@ function HomePage() {
                 onClick={() => handleGalleryImageClick(1)}
               >
                 <img
-                  src="/src/assets/walkingMirror.jpeg"
+                  src={walkingMirror}
                   alt="Walking Mirror"
                   className="w-full h-full object-cover"
                 />
@@ -199,7 +213,7 @@ function HomePage() {
               onClick={() => handleGalleryImageClick(2)}
             >
               <img
-                src="/src/assets/theWomanInScarf.jpeg"
+                src={theWomanInScarf}
                 alt="The Woman In Scarf"
                 className="w-full h-full object-cover"
               />
@@ -235,7 +249,7 @@ function HomePage() {
           {/* Image - Shows first on mobile, second on desktop */}
           <div className="rounded-lg overflow-hidden md:order-2">
             <img
-              src="/src/assets/FomsImg.jpeg"
+              src={fomsImg}
               alt="About Me"
               className="w-full h-auto object-cover"
             />
@@ -246,7 +260,7 @@ function HomePage() {
             <div className="space-y-4 text-gray-900 font-dm-sans">
               <p className="text-base leading-relaxed">
                 Ufuomaoghene Akpokiniovo is an editorial and lifestyle photographer, passionate about
-                capturing the beauty in everyday life that easily fades into the background of people’s lives, and the expression of emotion and creativity hidden in the most simple of moments.
+                capturing the beauty in everyday life that easily fades into the background of people's lives, and the expression of emotion and creativity hidden in the most simple of moments.
               </p>
               <p className="text-base leading-relaxed">
                 He is an emerging photographer, approaching photography as an avenue to slow down, observe and create images as lenses for people to see life through.
@@ -406,7 +420,7 @@ function HomePage() {
           </div>
         </div>
 
-        {/* Desktop Layout - Grid Layout (unchanged) */}
+        {/* Desktop Layout - Grid Layout */}
         <div className="hidden md:grid grid-cols-12 gap-4">
           {/* First Image - Left side, spans full height */}
           <div

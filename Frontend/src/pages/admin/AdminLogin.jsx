@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAdminAuthStore from '../../stores/useAdminAuthStore';
 import AdminNotification from '../../components/AdminNotification';
+import adminLogo from '../../assets/adminLogo.png';
+
 
 function AdminLogin() {
   const navigate = useNavigate();
@@ -98,7 +100,7 @@ function AdminLogin() {
       {/* Top Bar */}
       <div className="border-b border-gray-700 px-4 sm:px-6 lg:px-12 py-4 flex items-center justify-between">
         <img 
-          src="/src/assets/adminLogo.png" 
+          src={adminLogo}
           alt="Admin Logo" 
           className="h-8 md:h-10"
         />

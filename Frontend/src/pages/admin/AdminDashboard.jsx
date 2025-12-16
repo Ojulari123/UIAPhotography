@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import useAdminOrderStore from '../../stores/useAdminOrderStore';
 import useAdminProductStore from '../../stores/useAdminProductStore';
+import adminLogo from '../../assets/adminLogo.png';
+
 
 function AdminDashboard() {
   const location = useLocation();
@@ -165,7 +167,7 @@ function AdminDashboard() {
       {/* Fixed Top Bar */}
       <div className="fixed top-0 left-0 right-0 z-30 border-b border-gray-700 bg-[#171F22] px-4 sm:px-6 lg:px-12 py-4 flex items-center justify-between">
         <img 
-          src="/src/assets/adminLogo.png" 
+          src={adminLogo} 
           alt="Admin Logo" 
           className="h-8 md:h-10"
         />

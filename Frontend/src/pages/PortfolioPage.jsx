@@ -1,12 +1,18 @@
 import { Link } from 'react-router-dom';
 
+// Import images
+import digitalBg from '../assets/digital.png'; 
+import natureBg from '../assets/nature.png';
+import wildlifeBg from '../assets/wildlife.png';
+import landscapeBg from '../assets/landscape.png';
+
 function PortfolioPage() {
   return (
     <div className="min-h-screen">
       {/* Digital Category */}
       <section className="relative w-full h-[40vh] md:h-[85vh] overflow-hidden">
         <img 
-          src="/src/assets/digital.png" 
+          src={digitalBg} 
           alt="Digital" 
           className="w-full h-full object-cover"
         />
@@ -33,7 +39,7 @@ function PortfolioPage() {
       {/* Nature Category */}
       <section className="relative w-full h-[40vh] md:h-[85vh] overflow-hidden">
         <img 
-          src="/src/assets/nature.png" 
+          src={natureBg} 
           alt="Nature" 
           className="w-full h-full object-cover"
         />
@@ -60,7 +66,7 @@ function PortfolioPage() {
       {/* Wildlife Category */}
       <section className="relative w-full h-[40vh] md:h-[85vh] overflow-hidden">
         <img 
-          src="/src/assets/wildlife.png" 
+          src={wildlifeBg} 
           alt="Wildlife" 
           className="w-full h-full object-cover"
         />
@@ -87,7 +93,7 @@ function PortfolioPage() {
       {/* Landscape Category */}
       <section className="relative w-full h-[40vh] md:h-[85vh] overflow-hidden">
         <img 
-          src="/src/assets/landscape.png" 
+          src={landscapeBg} 
           alt="Landscape" 
           className="w-full h-full object-cover"
         />
