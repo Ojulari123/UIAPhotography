@@ -79,11 +79,16 @@ async def create_order( order_data: CreateOrder, shipping_type: str = "standard"
 
     order_total = subtotal + shipping_fee + tax_amount
 
+    if has_physical:
+        order_status = StatusType.ordered
+    else:
+        order_status = StatusType.delivered 
+
     new_order = Orders(
         customer_name=order_data.customer_name,
         customer_email=order_data.customer_email,
         phone_number=order_data.phone_number,
-        status=StatusType.ordered.value,
+        status=order_status,
         order_total=float(order_total),
         created_at=datetime.utcnow()
     )
@@ -125,6 +130,8 @@ async def create_order( order_data: CreateOrder, shipping_type: str = "standard"
         db.add(order_item)
     db.commit()
     db.refresh(new_order)
+
+    send_order_confirmation_email(new_order, db)
 
     return OrderResponse(
         id=new_order.id,
