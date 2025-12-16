@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Form, File, UploadFile, B
 from sqlalchemy.orm import Session
 import cloudinary
 import cloudinary.uploader
-from schemas import AddProductsbyUrlInfo, ProductsData, AddProductMetafield, EditProductsData, PortfolioCreate, PortfolioResponse, PortfolioImageResponse, PicOfTheWeekResponse, AdminCreate
+from schemas import AddProductsbyUrlInfo, ProductsData, AddProductMetafield, EditProductsData, PortfolioType, PortfolioCreate, PortfolioResponse, PortfolioImageResponse, PicOfTheWeekResponse, AdminCreate
 from tables import get_db, Admin, Products, OrderItem, Portfolio, PortfolioImages, PicOfTheWeek
 from func import generate_slug, save_upload_file, create_thumbnail, save_pic_of_week, upload_pic_of_week, hash_password, verify_password
 from typing import Optional, List
@@ -244,8 +244,16 @@ async def add_new_portfolio(title: str = Form(...), category: str = Form(...), f
     slug = generate_slug(title)
     if db.query(Portfolio).filter(Portfolio.slug == slug).first():
         raise HTTPException(status_code=400, detail="Slug already exists. Please change the title.")
+    
+    try:
+        category_enum = PortfolioType(category.lower())
+    except ValueError:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Invalid category. Must be one of: {[e.value for e in PortfolioType]}"
+        )
 
-    portfolio = Portfolio(title=title, slug=slug, category=category)
+    portfolio = Portfolio(title=title, slug=slug, category=category_enum)
     db.add(portfolio)
     db.commit()
     db.refresh(portfolio)
@@ -255,7 +263,7 @@ async def add_new_portfolio(title: str = Form(...), category: str = Form(...), f
         saved_file = save_upload_file(file)
         upload_result = cloudinary.uploader.upload(
             saved_file["local_path"],
-            folder=f"portfolio/{category}/{slug}",
+            folder=f"portfolio/{category_enum}/{slug}",
             public_id=file.filename.rsplit('.', 1)[0],
             resource_type="image",
             overwrite=True
