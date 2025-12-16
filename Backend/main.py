@@ -28,15 +28,16 @@ class ConnectionManager:
         self.active_connections.remove(websocket)
 
 connection_manager = ConnectionManager()
-
+# allow_origins=[
+    #     "https://uiaphotography.com",
+    #     "https://www.uiaphotography.com",
+    #     "https://uiaphotography-frontend.onrender.com",
+    #     ],         
+    # allow_credentials=True,
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://uiaphotography.com",
-        "https://www.uiaphotography.com",
-        "https://uiaphotography-frontend.onrender.com",
-        ],         
-    allow_credentials=True,        
+    allow_origins=["*"],
+    allow_credentials=False,       
     allow_methods=["*"],          
     allow_headers=["*"],           
 )
