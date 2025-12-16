@@ -515,8 +515,8 @@ function CategoryPage() {
     const categoryMap = {
       'portraits': digitalBg,
       'editorial': natureBg,
-      'product-lifestyle': wildlifeBg,
-      'street-travel': landscapeBg,
+      'productlifestyle': wildlifeBg,
+      'streettravel': landscapeBg,
     };
     return categoryMap[category.toLowerCase()] || categoryMap.portraits;
   };
@@ -526,8 +526,8 @@ function CategoryPage() {
     const titleMap = {
       'portraits': 'PORTRAITS',
       'editorial': 'EDITORIAL',
-      'product-lifestyle': 'PRODUCT LIFESTYLE',
-      'street-travel': 'STREET + TRAVEL',
+      'productlifestyle': 'PRODUCT LIFESTYLE',
+      'streettravel': 'STREET + TRAVEL',
     };
     return titleMap[category.toLowerCase()] || category.toUpperCase();
   };

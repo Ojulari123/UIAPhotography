@@ -206,7 +206,7 @@ function PortfolioPage() {
 
           <div className="absolute bottom-4 right-4 md:bottom-8 md:right-8">
             <Link 
-              to="/portfolio/product-lifestyle"
+              to="/portfolio/productlifestyle"
               className="text-white font-dm-sans text-xs sm:text-sm md:text-base transition-all"
             >
               VIEW ALL
@@ -233,7 +233,7 @@ function PortfolioPage() {
 
           <div className="absolute bottom-4 right-4 md:bottom-8 md:right-8">
             <Link 
-              to="/portfolio/street-travel"
+              to="/portfolio/streettravel"
               className="text-white font-dm-sans text-xs sm:text-sm md:text-base transition-all"
             >
               VIEW ALL
