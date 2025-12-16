@@ -277,7 +277,7 @@ function HomePage() {
       <section className="bg-[#D9D9D9] bg-opacity-50 py-16 px-4 sm:px-6 lg:px-12">
         <div className="max-w-7xl mx-auto">
           <h2 className="text-xl md:text-4xl font-medium text-gray-900 mb-8 font-dm-sans">
-            PICTURE & POEM OF THE WEEK
+            MINDSPACE
           </h2>
 
           {picLoading ? (
@@ -313,7 +313,7 @@ function HomePage() {
             </div>
           ) : (
             <div className="text-center py-12">
-              <p className="text-gray-600">No picture of the week available yet.</p>
+              <p className="text-gray-600">No mindspace available yet.</p>
             </div>
           )}
         </div>
