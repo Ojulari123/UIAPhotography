@@ -14,7 +14,7 @@ import theCut from '../assets/theCut.jpeg';
 import inTheCrowd from '../assets/inTheCrowd.jpeg';
 import gingerLady from '../assets/gingerLady.jpeg';
 import theVixen from '../assets/theVixen.jpeg';
-import fomsImg from '../assets/FomsImg.jpeg';
+import fomsImg from '../assets/FomsImg.jpg';
 
 function HomePage() {
   const { pics, fetchAllPics, loading: picLoading } = usePicOfWeekStore();
@@ -245,7 +245,7 @@ function HomePage() {
           ABOUT ME
         </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center">
           {/* Image - Shows first on mobile, second on desktop */}
           <div className="rounded-lg overflow-hidden md:order-2">
             <img
@@ -261,10 +261,10 @@ function HomePage() {
               <p className="text-base leading-relaxed">
                 Ufuomaoghene Akpokiniovo is an editorial and lifestyle photographer, passionate about
                 capturing the beauty in everyday life that easily fades into the background of people's lives, and the expression of emotion and creativity hidden in the most simple of moments.
-              </p>
+              </p><br />
               <p className="text-base leading-relaxed">
                 He is an emerging photographer, approaching photography as an avenue to slow down, observe and create images as lenses for people to see life through.
-              </p>
+              </p><br />
               <p className="text-base leading-relaxed">
                 Building toward a full-time practice, he is focused and intentional on transitioning from photography as a creative outlet to working with individuals and brands across the world.
               </p>

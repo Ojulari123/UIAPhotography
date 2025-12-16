@@ -1,8 +1,69 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import Select from 'react-select';
 import useAdminProductStore from '../../stores/useAdminProductStore';
 import AdminNotification from '../../components/AdminNotification';
 import adminLogo from '../../assets/adminLogo.png';
+
+
+// Dimension options for dropdown
+const dimensionOptions = [
+  { value: 'A3', label: 'A3' },
+  { value: 'A4', label: 'A4' },
+  { value: 'A5', label: 'A5' }
+];
+
+// Custom styles for react-select to match dark theme
+const selectStyles = {
+  control: (base, state) => ({
+    ...base,
+    backgroundColor: 'transparent',
+    borderColor: 'white',
+    borderRadius: '0',
+    minHeight: '48px',
+    boxShadow: state.isFocused ? '0 0 0 1px white' : 'none',
+    '&:hover': {
+      borderColor: 'white'
+    }
+  }),
+  menu: (base) => ({
+    ...base,
+    backgroundColor: '#171F22',
+    border: '1px solid white',
+    borderRadius: '0',
+  }),
+  option: (base, state) => ({
+    ...base,
+    backgroundColor: state.isSelected ? '#374151' : state.isFocused ? '#1f2937' : 'transparent',
+    color: 'white',
+    cursor: 'pointer',
+    '&:active': {
+      backgroundColor: '#374151'
+    }
+  }),
+  singleValue: (base) => ({
+    ...base,
+    color: 'white',
+  }),
+  placeholder: (base) => ({
+    ...base,
+    color: '#6b7280',
+  }),
+  input: (base) => ({
+    ...base,
+    color: 'white',
+  }),
+  dropdownIndicator: (base) => ({
+    ...base,
+    color: 'white',
+    '&:hover': {
+      color: 'white'
+    }
+  }),
+  indicatorSeparator: () => ({
+    display: 'none'
+  }),
+};
 
 
 function AdminStore() {
@@ -634,14 +695,17 @@ function AdminStore() {
 
                 {/* Dimensions/Size */}
                 <div>
-                  <input
-                    type="text"
-                    name="dimensions"
-                    value={addFormData.dimensions}
-                    onChange={handleAddInputChange}
-                    placeholder="ENTER PRODUCT DIMENSIONS/SIZE"
-                    className="w-full bg-transparent border border-white px-4 py-3 font-dm-sans text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-white"
-                    disabled={adding}
+                  <Select
+                    value={dimensionOptions.find(opt => opt.value === addFormData.dimensions) || null}
+                    onChange={(selectedOption) => setAddFormData(prev => ({
+                      ...prev,
+                      dimensions: selectedOption?.value || ''
+                    }))}
+                    options={dimensionOptions}
+                    placeholder="SELECT PRODUCT DIMENSION"
+                    styles={selectStyles}
+                    isSearchable={false}
+                    isDisabled={adding}
                   />
                 </div>
 
@@ -872,14 +936,17 @@ function AdminStore() {
                   <label className="block font-dm-sans text-xs text-gray-400 mb-1 uppercase tracking-wide">
                     DIMENSION
                   </label>
-                  <input
-                    type="text"
-                    name="dimensions"
-                    value={editFormData.dimensions}
-                    onChange={handleEditInputChange}
-                    placeholder="ENTER DIMENSION"
-                    className="w-full bg-transparent border border-white px-4 py-3 font-dm-sans text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-white"
-                    disabled={submitting}
+                  <Select
+                    value={dimensionOptions.find(opt => opt.value === editFormData.dimensions) || null}
+                    onChange={(selectedOption) => setEditFormData(prev => ({
+                      ...prev,
+                      dimensions: selectedOption?.value || ''
+                    }))}
+                    options={dimensionOptions}
+                    placeholder="SELECT DIMENSION"
+                    styles={selectStyles}
+                    isSearchable={false}
+                    isDisabled={submitting}
                   />
                 </div>
 

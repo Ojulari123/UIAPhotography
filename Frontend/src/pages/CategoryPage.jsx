@@ -18,7 +18,7 @@ function CategoryPage() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isAlbumModalOpen, setIsAlbumModalOpen] = useState(false);
   const [loadedImages, setLoadedImages] = useState(new Set());
-  const [viewMode, setViewMode] = useState('singles'); // 'singles' or 'albums'
+  const [viewMode, setViewMode] = useState(null); // Start as null, will be set after data loads
 
   useEffect(() => {
     fetchPortfolios();
@@ -85,6 +85,26 @@ function CategoryPage() {
   // Separate singles and albums
   const singles = categoryPortfolios.filter(p => !isAlbum(p));
   const albums = categoryPortfolios.filter(p => isAlbum(p));
+
+  // Set default view mode based on available content
+  useEffect(() => {
+    if (!loading && viewMode === null) {
+      // If singles has items, show singles (default)
+      // If singles is empty but albums has items, show albums
+      if (singles.length > 0) {
+        setViewMode('singles');
+      } else if (albums.length > 0) {
+        setViewMode('albums');
+      } else {
+        setViewMode('singles'); // Default to singles even if both empty
+      }
+    }
+  }, [loading, singles.length, albums.length, viewMode]);
+
+  // Reset viewMode when category changes
+  useEffect(() => {
+    setViewMode(null);
+  }, [category]);
 
   // Get current display list based on view mode
   const displayPortfolios = viewMode === 'singles' ? singles : albums;
@@ -226,7 +246,7 @@ function CategoryPage() {
           </button>
         </div>
 
-        {loading ? (
+        {loading || viewMode === null ? (
           // Skeleton Loaders while fetching
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {[...Array(8)].map((_, index) => (

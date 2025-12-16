@@ -82,8 +82,8 @@ function AdminOrders() {
 
   // Carrier options for dropdown
   const carrierOptions = [
-    { value: 'ups', label: 'UPS' },
-    { value: 'dhl', label: 'DHL' },
+    { value: 'evri', label: 'EVRI' },
+    { value: 'royal_mail', label: 'ROYAL MAIL' },
     { value: 'other', label: 'Other' }
   ];
 
@@ -309,10 +309,10 @@ function AdminOrders() {
     // Determine carrier type from existing carrier
     let carrierType = '';
     const existingCarrier = orderShippingInfo?.carrier?.toLowerCase() || '';
-    if (existingCarrier === 'ups') {
-      carrierType = 'ups';
-    } else if (existingCarrier === 'dhl') {
-      carrierType = 'dhl';
+    if (existingCarrier === 'evri') {
+      carrierType = 'evri';
+    } else if (existingCarrier === 'royal mail' || existingCarrier === 'royal_mail') {
+      carrierType = 'royal_mail';
     } else if (existingCarrier) {
       carrierType = 'other';
     }
@@ -361,10 +361,10 @@ function AdminOrders() {
     try {
       // Determine the final carrier value
       let finalCarrier = '';
-      if (shippingFormData.carrierType === 'ups') {
-        finalCarrier = 'UPS';
-      } else if (shippingFormData.carrierType === 'dhl') {
-        finalCarrier = 'DHL';
+      if (shippingFormData.carrierType === 'evri') {
+        finalCarrier = 'EVRI';
+      } else if (shippingFormData.carrierType === 'royal_mail') {
+        finalCarrier = 'ROYAL MAIL';
       } else if (shippingFormData.carrierType === 'other') {
         finalCarrier = shippingFormData.carrier;
       }
