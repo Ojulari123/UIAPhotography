@@ -29,8 +29,8 @@ class DimensionType(str, enum.Enum):
 class PortfolioType(str, enum.Enum):
     portraits = "portraits"
     editorial = "editorial"
-    product_lifestyle = "product-lifestyle"
-    street_travel = "street-travel" 
+    productlifestyle = "productlifestyle"
+    streettravel = "streettravel" 
 
 DIMENSION_DETAILS = {
     "A3": "14.8 x 21.0 cm (11.7 x 16.5 in)",
