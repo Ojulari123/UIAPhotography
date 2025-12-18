@@ -46,6 +46,7 @@ A full-stack photography portfolio and e-commerce platform that combines visual 
   
 ## 📂 Project Structure
 UIAPhotography/
+
 ├── Backend/
 
 │   ├── main.py                 # FastAPI entrypoint
@@ -150,10 +151,6 @@ UIAPhotography/
    RESEND_EMAIL=your_resend_from_email
    
    RESEND_API=your_resend_api
-   
-   SMTP_USER=your_email@example.com
-   
-   SMTP_PASSWORD=your_email_password
    
    # Cloudinary
    
