@@ -1,6 +1,7 @@
 # 🛒 UIAPhotography [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Ojulari123/UIAPhotography)
 
-A full-stack photography portfolio and e-commerce platform that combines visual art and words. Features captivating photography, thought-provoking poetry, and one-of-a-kind artworks that you can enjoy and own.
+A full-stack photography portfolio and e-commerce platform that combines visual art and words. Features captivating photography, thought-provoking poetry, and one-of-a-kind artworks that you can enjoy and own
+
 ---
 
 ## ✨ Features
@@ -21,7 +22,8 @@ A full-stack photography portfolio and e-commerce platform that combines visual 
 - 📝 Admin Dashboard – Manage products, orders, and portfolio content
 - 🔐 Authentication – Secure admin access
 - 🌐 State Management – Zustand for efficient global state
-- 🎭 Smooth Animations – Framer Motion for engaging user experienc
+- 🎭 Smooth Animations – Framer Motion for engaging user experience
+  
 ---
 
 ## 🛠️ Tech Stack
@@ -44,7 +46,8 @@ A full-stack photography portfolio and e-commerce platform that combines visual 
 - Axios – HTTP client
 - React Select – Customizable select components
 - Framer Motion – Animation library
-- React Hook Form – Form validation  
+- React Hook Form – Form validation
+  
 ---
 
 ## 📂 Project Structure
@@ -79,6 +82,7 @@ UIAPhotography/
 │
 ├── .gitignore
 └── README.md
+
 ---
 
 ## ⚙️ Installation & Setup
@@ -162,6 +166,7 @@ UIAPhotography/
 5. **Build for production**
 
    npm run build
+   
 ---
 
 ## Deployment
@@ -189,6 +194,8 @@ UIAPhotography/
    Choose the AWS region closest to your backend
    Copy the connection string
    Add to your backend environment variables
+
+---
 
 ## 📌 Notes
 
