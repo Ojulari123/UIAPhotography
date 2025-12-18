@@ -2,8 +2,6 @@
 
 A full-stack photography portfolio and e-commerce platform that combines visual art and words. Features captivating photography, thought-provoking poetry, and one-of-a-kind artworks that you can enjoy and own
 
----
-
 ## ✨ Features
 **Backend**
 - 📦 **Products API** – Add, edit, list, and delete products (digital & physical).  
@@ -23,8 +21,6 @@ A full-stack photography portfolio and e-commerce platform that combines visual 
 - 🔐 Authentication – Secure admin access
 - 🌐 State Management – Zustand for efficient global state
 - 🎭 Smooth Animations – Framer Motion for engaging user experience
-  
----
 
 ## 🛠️ Tech Stack
 **Backend**
@@ -48,39 +44,62 @@ A full-stack photography portfolio and e-commerce platform that combines visual 
 - Framer Motion – Animation library
 - React Hook Form – Form validation
   
----
-
 ## 📂 Project Structure
 UIAPhotography/
 ├── Backend/
+
 │   ├── main.py                 # FastAPI entrypoint
+
 │   ├── func.py                 # Utility functions
+
 │   ├── products.py             # Products API routes
+
 │   ├── purchase.py             # Orders & payments API
+
 │   ├── portfolio.py            # Portfolio management API
+
 │   ├── schemas.py              # Pydantic schemas
+
 │   ├── tables.py               # SQLAlchemy models
+
 │   ├── requirements.txt        # Python dependencies
+
 │   └── .env                    # Environment variables
 │
 ├── Frontend/
+
 │   ├── src/
+
 │   │   ├── components/         # Reusable React components
+
 │   │   ├── pages/              # Page components
+
 │   │   │   ├── admin/          # Admin dashboard pages
+
 │   │   │   └── user/           # Public-facing pages
+
 │   │   ├── stores/             # Zustand state stores
+
 │   │   ├── services/           # API service functions
+
 │   │   ├── assets/             # Images, fonts, static files
+
 │   │   ├── App.jsx             # Main app component
+
 │   │   └── main.jsx            # React entry point
+
 │   ├── public/                 # Static assets
+
 │   ├── package.json            # Node dependencies
+
 │   ├── vite.config.js          # Vite configuration
+
 │   ├── tailwind.config.js      # Tailwind CSS config
+
 │   └── .env                    # Environment variables
 │
 ├── .gitignore
+
 └── README.md
 
 ---
@@ -109,34 +128,51 @@ UIAPhotography/
     Create a .env file in the backend folder:
 
    # Database
+   
    PGUSER=your_postgres_user
+   
    PGPASSWORD=your_postgres_password
+   
    PGDB=your_database_name
+   
    PGHOST=your_postgres_host
+   
    PGPORT=5432
    
    # Stripe
+   
    STRIPE_SECRET_KEY=your_stripe_secret
+   
    STRIPE_PUBLISHABLE_KEY=your_stripe_publishable
    
    # Email
-   SMTP_HOST=smtp.yourmail.com
-   SMTP_PORT=587
+   
+   RESEND_EMAIL=your_resend_from_email
+   
+   RESEND_API=your_resend_api
+   
    SMTP_USER=your_email@example.com
+   
    SMTP_PASSWORD=your_email_password
    
    # Cloudinary
+   
    CLOUDINARY_CLOUD_NAME=your_cloud_name
+   
    CLOUDINARY_API_KEY=your_api_key
+   
    CLOUDINARY_API_SECRET=your_api_secret
 
 - **Run database migrations**
 
     Tables are automatically created when you run the app (via Base.metadata.create_all() in tables.py). If you want migrations: integrate Alembic.
   
-    # Incase you integrate alembic 
+    # Incase you integrate alembic
+  
        alembic init alembic
+  
        alembic revision --autogenerate -m "Initial migration"
+  
        alembic upgrade head
 
 4. **Start Server**
