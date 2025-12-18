@@ -1,4 +1,4 @@
-# 🛒 UIAPhotography [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Ojulari123/UIAPhotography)
+# 🛒 UIAPhotography
 
 A full-stack photography portfolio and e-commerce platform that combines visual art and words. Features captivating photography, thought-provoking poetry, and one-of-a-kind artworks that you can enjoy and own
 
