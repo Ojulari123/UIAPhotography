@@ -98,7 +98,9 @@ UIAPhotography/
 │   ├── tailwind.config.js      # Tailwind CSS config
 
 │   └── .env                    # Environment variables
+
 │
+
 ├── .gitignore
 
 └── README.md
