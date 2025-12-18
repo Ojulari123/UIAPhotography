@@ -192,13 +192,14 @@ UIAPhotography/
     Create a .env file in the frontend folder:
    
    VITE_API_URL=your_vite_api_url
+   
    VITE_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
 
-4. **Start the development server**
+5. **Start the development server**
 
    npm run dev
 
-5. **Build for production**
+6. **Build for production**
 
    npm run build
    
@@ -208,26 +209,39 @@ UIAPhotography/
 **Backend (Render)**
 
    Create a new Web Service on Render
+   
    Connect your GitHub repository
+   
    Set build command: pip install -r requirements.txt
+   
    Set start command: uvicorn main:app --host 0.0.0.0 --port $PORT
+   
    Add all environment variables from your .env file
+   
    Deploy!
 
 **Frontend (Render)**
 
    Import your GitHub repository
+   
    Set build command: npm run build
+   
    Set output directory: dist
+   
    Add environment variables
+   
    Deploy!
 
 **Database (Neon)**
 
    Sign up at neon.tech
+   
    Create a new project
+   
    Choose the AWS region closest to your backend
+   
    Copy the connection string
+   
    Add to your backend environment variables
 
 ---
