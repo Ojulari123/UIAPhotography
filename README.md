@@ -1,4 +1,4 @@
-# 🛒 UIAPhotography
+# 🛒 UIAPhotography [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Ojulari123/UIAPhotography)
 
 A full-stack photography portfolio and e-commerce platform that combines visual art and words. Features captivating photography, thought-provoking poetry, and one-of-a-kind artworks that you can enjoy and own
 
@@ -66,7 +66,10 @@ UIAPhotography/
 │   ├── requirements.txt        # Python dependencies
 
 │   └── .env                    # Environment variables
+
 │
+
+
 ├── Frontend/
 
 │   ├── src/
@@ -105,32 +108,32 @@ UIAPhotography/
 
 └── README.md
 
----
 
 ## ⚙️ Installation & Setup
 **Backend Setup**
 1. **Clone the repository**
    
-   git clone https://github.com/Ojulari123/UIAPhotography.git
-   cd backend
+       git clone https://github.com/Ojulari123/UIAPhotography.git
+
+       cd backend
 
 - **Create Virtual Environment(Not always neccessary)**
     
-    python3 -m venv venv
+      python3 -m venv venv
 
-    source venv/bin/activate
+      source venv/bin/activate
      
-    venv\Scripts\activate     
+      venv\Scripts\activate     
 
 2. **Install dependencies**
 
-   pip install -r requirements.txt
+       pip install -r requirements.txt
 
 3. **Set up environment variables**
   
     Create a .env file in the backend folder:
 
-   # Database
+   **Database**
    
    PGUSER=your_postgres_user
    
@@ -142,19 +145,19 @@ UIAPhotography/
    
    PGPORT=5432
    
-   # Stripe
+   **Stripe**
    
    STRIPE_SECRET_KEY=your_stripe_secret
    
    STRIPE_PUBLISHABLE_KEY=your_stripe_publishable
    
-   # Email
+   **Email**
    
    RESEND_EMAIL=your_resend_from_email
    
    RESEND_API=your_resend_api
    
-   # Cloudinary
+   **Cloudinary**
    
    CLOUDINARY_CLOUD_NAME=your_cloud_name
    
@@ -166,7 +169,7 @@ UIAPhotography/
 
     Tables are automatically created when you run the app (via Base.metadata.create_all() in tables.py). If you want migrations: integrate Alembic.
   
-    # Incase you integrate alembic
+    Incase you integrate alembic
   
        alembic init alembic
   
@@ -176,16 +179,16 @@ UIAPhotography/
 
 4. **Start Server**
 
-    uvicorn main:app --reload
+        uvicorn main:app --reload
    
 **Frontend Setup**
 1. **Navigate to Frontend directory**
    
-   cd ../Frontend
+       cd ../Frontend
 
 2. **Install Dependencies**
 
-   npm install
+       npm install
 
 3. **Set up environment variables**
   
@@ -197,15 +200,14 @@ UIAPhotography/
 
 5. **Start the development server**
 
-   npm run dev
+       npm run dev
 
 6. **Build for production**
 
-   npm run build
+       npm run build  
    
----
 
-## Deployment
+# Deployment
 **Backend (Render)**
 
    Create a new Web Service on Render
@@ -244,29 +246,29 @@ UIAPhotography/
    
    Add to your backend environment variables
 
----
+# 📌 Notes
 
-## 📌 Notes
+  Environment variables are required
 
-    Environment variables are required
+  Database defaults to PostgreSQL – adjust in tables.py if using another DB.
 
-    Database defaults to PostgreSQL – adjust in tables.py if using another DB.
+  Thumbnails & uploads – Both are generated and stored locally (consider S3 for production).
 
-    Thumbnails & uploads – Both are generated and stored locally (consider S3 for production).
+  Stripe webhooks – must be publicly accessible (use ngrok for local dev).
 
-    Stripe webhooks – must be publicly accessible (use ngrok for local dev).
-
-## Developers:
+# Developers:
 
 - Ojulari Tobi
 - Ojulari Adeoluwa
 - Ebire Damilare
 
-## 📄 License
+# 📄 License
 This project is private and proprietary.
 
-## 🔗 Links
+# 🔗 Links
 - uiaphotography.com (Live Site)
 - uiaphotography.onrender.com/docs (Backend API)
 
-Made with ❤️ by the UIAPhotography Team
+
+
+*Made with ❤️ by the UIAPhotography Team*
