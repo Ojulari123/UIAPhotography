@@ -133,7 +133,7 @@ UIAPhotography/
   
     Create a .env file in the backend folder:
 
-   **Database**
+   ### Database
    
    PGUSER=your_postgres_user
    
@@ -145,19 +145,19 @@ UIAPhotography/
    
    PGPORT=5432
    
-   **Stripe**
+   ### Stripe
    
    STRIPE_SECRET_KEY=your_stripe_secret
    
    STRIPE_PUBLISHABLE_KEY=your_stripe_publishable
    
-   **Email**
+   ### Email
    
    RESEND_EMAIL=your_resend_from_email
    
    RESEND_API=your_resend_api
    
-   **Cloudinary**
+   ### Cloudinary
    
    CLOUDINARY_CLOUD_NAME=your_cloud_name
    
@@ -194,9 +194,9 @@ UIAPhotography/
   
     Create a .env file in the frontend folder:
    
-   VITE_API_URL=your_vite_api_url
+       VITE_API_URL=your_vite_api_url
    
-   VITE_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
+       VITE_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
 
 5. **Start the development server**
 
@@ -208,7 +208,7 @@ UIAPhotography/
    
 
 # Deployment
-**Backend (Render)**
+### Backend (Render)
 
    Create a new Web Service on Render
    
@@ -222,7 +222,7 @@ UIAPhotography/
    
    Deploy!
 
-**Frontend (Render)**
+### Frontend (Render)
 
    Import your GitHub repository
    
@@ -234,7 +234,7 @@ UIAPhotography/
    
    Deploy!
 
-**Database (Neon)**
+### Database (Neon)
 
    Sign up at neon.tech
    
@@ -266,8 +266,8 @@ UIAPhotography/
 This project is private and proprietary.
 
 # 🔗 Links
-- uiaphotography.com (Live Site)
-- uiaphotography.onrender.com/docs (Backend API)
+- [uiaphotography.com](https://www.uiaphotography.com/) (Live Site)
+- [uiaphotography.onrender.com/docs](https://uiaphotography.onrender.com/docs) (Backend API)
 
 
 
